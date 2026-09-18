@@ -10,15 +10,8 @@
 **Problem:** Keyword search across scattered personal files (local disk, Drive, PDFs, docs) fails when you don't remember exact filenames or terms. Retrieval should work off *meaning*, not string matching.
 
 **Goals:**
-- One engine, indexed once, queryable from any surface (desktop, mobile, VS Code, browser, Office).
-- Self-hosted — no third-party cloud dependency for indexing or search.
-- Reuse existing local-LLM infrastructure (Ollama) rather than paying for external embedding/inference APIs.
+- One engine, indexed once, queryable from any surface (desktop, mobile, VS Code, browser, Office, coding assistant, coding agents, IDEs).
 - Fast to validate before investing in polished client UIs.
-
-**Non-goals (v1):**
-- Multi-user / team support.
-- Deep native plugin integration inside PDF readers.
-- Full offline-first sync across devices (deferred — see §13).
 
 **Recommended build order:** core engine → MCP wrapper (validate quality) → self-hosted deployment → mobile → browser extension → Office add-in → (optional) OS-native search hooks.
 
