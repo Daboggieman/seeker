@@ -21,7 +21,10 @@ import pytest
 
 from seeker.chunking.chunker import count_tokens
 from seeker.connectors.base import Connector, RawItem
-from seeker.connectors.filesystem import FilesystemConnector
+from seeker.connectors.filesystem import (
+    FilesystemConnector,
+    PathOutsideRootError,
+)
 
 
 class TmpDir:
@@ -146,31 +149,31 @@ class TestFilesystemConnectorFetchContent:
                 path=str(td.path.parent / "escape.txt"),
                 modified_at=datetime.now(timezone.utc),
             )
-            from seeker.connectors.filesystem import PathOutsideRootError
-
             with pytest.raises(PathOutsideRootError):
                 conn.fetch_content(bad_item)
 
 
 class TestFilesystemConnectorContentHash:
-    def test_content_hash_is_computed_on_items(self) -> None:
+    def test_content_hash_is_computed_on_fetch(self) -> None:
         with TmpDir() as td:
             td.write("a.txt", "the quick brown fox")
             conn = FilesystemConnector(source_id="fs-test", root=td.path)
             items = conn.list_changed_items(since=None)
-            assert items[0].content_hash is not None
-            assert (
-                items[0].content_hash
-                == sha256(b"the quick brown fox")
-            )
+            assert items
+            assert items[0].content_hash is None  # set lazily
+            _data, _mime = conn.fetch_content(items[0])
+            assert items[0].content_hash == sha256(b"the quick brown fox")
 
-    def test_unchanged_file_has_same_hash(self) -> None:
+    def test_hash_is_idempotent(self) -> None:
         with TmpDir() as td:
             td.write("a.txt", "stable content")
             conn = FilesystemConnector(source_id="fs-test", root=td.path)
-            first = conn.list_changed_items(since=None)
-            second = conn.list_changed_items(since=first[0].modified_at)
-            assert first[0].content_hash == second[0].content_hash
+            items = conn.list_changed_items(since=None)
+            _data, _mime = conn.fetch_content(items[0])
+            h1 = items[0].content_hash
+            # Fetch again
+            _data2, _mime2 = conn.fetch_content(items[0])
+            assert items[0].content_hash == h1
 
 
 class TestFilesystemConnectorMimeGuessing:

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import mimetypes
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -72,8 +73,9 @@ class FilesystemConnector(Connector):
 
     def list_changed_items(self, since: datetime | None) -> list[RawItem]:
         items: list[RawItem] = []
-        for ext in self._extensions:
-            # glob with recursive search; walker = os.walk gives same result
+        # Extensionless files (dotfiles like '.gitignore', '.env', 'README')
+        # are text candidates too; extension filters apply on top.
+        for ext in [*self._extensions, ""]:
             for path_str in _walk_ext(self._root, ext):
                 path = Path(path_str)
                 mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
@@ -100,9 +102,19 @@ class FilesystemConnector(Connector):
 
 
 def _walk_ext(root: Path, ext: str) -> list[str]:
-    """Return all paths under root with the given extension (without dot in ext)."""
-    pattern = f"**/*.{ext.lstrip('.')}"
-    return [str(p) for p in root.glob(pattern) if p.is_file()]
+    """Return all file paths under root with the given suffix.
+
+    `ext` may be a normal suffix ('.txt') or the empty string, which matches
+    extensionless files (dotfiles like '.gitignore', '.env', 'README').
+    os.walk sees hidden files and hidden directories, which glob skips.
+    """
+    found: list[str] = []
+    for dirpath, _dirnames, filenames in os.walk(root):
+        for name in sorted(filenames):
+            path = Path(dirpath) / name
+            if path.suffix == ext:
+                found.append(str(path))
+    return found
 
 
 def _infer_mime(name: str, data: bytes) -> str:
