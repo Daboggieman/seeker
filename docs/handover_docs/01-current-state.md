@@ -26,7 +26,7 @@ enters only at Phase 2.
 
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| 1 — Core engine + MCP server | in progress (pre-flight done) | — | Mock embeddings; filesystem connector only |
+| 1 — Core engine + MCP server | in progress | chunker: 55 tests green | Mock embeddings; filesystem connector only; on branch `phase_1_core_engine` |
 | 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |

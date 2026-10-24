@@ -20,6 +20,9 @@ it elsewhere — multiple copies diverge, and a stale copy is worse than no copy
 - **Do not create or amend commits unless the user asks.** That includes not staging, not
   tidying this index, and not committing "while you're in there". The user commits and pushes
   outside these sessions.
+- **One branch per phase.** Each phase lives on its own branch (e.g. `phase_1_core_engine`).
+  The branch is created before the first commit of that phase; merges and pushes happen
+  only when the user asks.
 - **Physical device runs, Ollama model pulls, and production deployments remain the user's to
   run.** Report readiness; do not claim a gate passed without their evidence. Automated checks
   (`pytest -q`, `ruff`) are ours to run.
