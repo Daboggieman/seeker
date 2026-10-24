@@ -11,16 +11,14 @@ Contract (docs/build_docs/04-core-engine-specs.md section 5.1, filesystem row):
 from __future__ import annotations
 
 import hashlib
-import os
 import shutil
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
-from seeker.chunking.chunker import count_tokens
-from seeker.connectors.base import Connector, RawItem
+from seeker.connectors.base import RawItem
 from seeker.connectors.filesystem import (
     FilesystemConnector,
     PathOutsideRootError,
@@ -108,7 +106,7 @@ class TestFilesystemConnectorListChangedItems:
 class TestFilesystemConnectorFetchContent:
     def test_returns_bytes_and_mime_for_plain_text(self) -> None:
         with TmpDir() as td:
-            p = td.write("notes.txt", "meeting notes on the Q1 budget")
+            td.write("notes.txt", "meeting notes on the Q1 budget")
             conn = FilesystemConnector(source_id="fs-test", root=td.path)
             items = conn.list_changed_items(since=None)
             data, mime = conn.fetch_content(items[0])
@@ -147,7 +145,7 @@ class TestFilesystemConnectorFetchContent:
             # Path that escapes the root
             bad_item = RawItem(
                 path=str(td.path.parent / "escape.txt"),
-                modified_at=datetime.now(timezone.utc),
+                modified_at=datetime.now(UTC),
             )
             with pytest.raises(PathOutsideRootError):
                 conn.fetch_content(bad_item)

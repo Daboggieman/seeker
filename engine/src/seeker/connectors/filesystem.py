@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import mimetypes
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from seeker.connectors.base import Connector, RawItem
@@ -66,7 +66,7 @@ class FilesystemConnector(Connector):
 
     def _is_inside_root(self, path: Path) -> bool:
         try:
-            resolved = path.resolve().relative_to(self._root)
+            path.resolve().relative_to(self._root)
             return True
         except ValueError:
             return False
@@ -78,7 +78,7 @@ class FilesystemConnector(Connector):
         for ext in [*self._extensions, ""]:
             for path_str in _walk_ext(self._root, ext):
                 path = Path(path_str)
-                mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+                mtime = datetime.fromtimestamp(path.stat().st_mtime, tz=UTC)
                 if since is not None and mtime <= since:
                     continue
                 items.append(
