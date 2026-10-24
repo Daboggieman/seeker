@@ -6,6 +6,12 @@ self-hosted deployment → mobile → browser extension → Office add-in → OS
 **Start of every phase: verification step.** Confirm what is already done and only implement
 what is missing. Never assume a prior phase is complete because it was planned.
 
+> **2026-10-24:** Phase 1 code is complete (61 tests green). See
+> [`../handover_docs/01-current-state.md`](../handover_docs/01-current-state.md) for the
+> full component inventory. The exit criterion (recall@5 on real files via MCP) is still
+> pending — it requires the real embedding backend (open decision 9) and a real indexed
+> directory (open decision 10).
+
 | Phase | Deliverable | Done when |
 |---|---|---|
 | 1 | Core engine + MCP server | You can ask Claude Desktop a vague question and get the right file back |
