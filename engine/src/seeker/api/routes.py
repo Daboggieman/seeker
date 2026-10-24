@@ -7,17 +7,10 @@ from __future__ import annotations
 
 import json
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from seeker.api.auth import require_auth
 from seeker.api.schemas import (
-    SearchRequest,
-    SearchResponse,
-    SearchResult,
-    SourceRegisterRequest,
-    SourceResponse,
-    StatusResponse,
-)
     SearchRequest,
     SearchResponse,
     SearchResult,
@@ -68,7 +61,7 @@ def _store_or_404() -> IndexStore:
 
 
 @router.post("/sources", status_code=status.HTTP_201_CREATED)
-def register_source(req: SourceRegisterRequest) -> SourceResponse:
+def register_source(req: SourceRegisterRequest, _: None = Depends(require_auth)) -> SourceResponse:
     store = _store_or_404()
     store.register_source(req.source_id, req.source_type, req.config)
     # Instantiate and register the connector immediately so sync works.
@@ -89,7 +82,7 @@ def register_source(req: SourceRegisterRequest) -> SourceResponse:
 
 
 @router.get("/sources")
-def list_sources() -> list[SourceResponse]:
+def list_sources(_: None = Depends(require_auth)) -> list[SourceResponse]:
     store = _store_or_404()
     return [
         SourceResponse(
@@ -101,7 +94,7 @@ def list_sources() -> list[SourceResponse]:
 
 
 @router.post("/sources/{source_id}/sync")
-def sync_source(source_id: str) -> dict:
+def sync_source(source_id: str, _: None = Depends(require_auth)) -> dict:
     store = _store_or_404()
     sources = store.list_sources()
     if source_id not in {s["id"] for s in sources}:
@@ -117,7 +110,7 @@ def sync_source(source_id: str) -> dict:
 
 
 @router.delete("/sources/{source_id}")
-def delete_source(source_id: str) -> dict:
+def delete_source(source_id: str, _: None = Depends(require_auth)) -> dict:
     store = _store_or_404()
     sources = store.list_sources()
     if source_id not in {s["id"] for s in sources}:
@@ -133,7 +126,7 @@ def delete_source(source_id: str) -> dict:
 
 
 @router.post("/search", response_model=SearchResponse)
-def search(req: SearchRequest) -> SearchResponse:
+def search(req: SearchRequest, _: None = Depends(require_auth)) -> SearchResponse:
     store = _store_or_404()
     backend = _backend or MockEmbeddingBackend()
     query_vec = backend.embed([req.query])[0]
@@ -161,7 +154,7 @@ def search(req: SearchRequest) -> SearchResponse:
 
 
 @router.get("/status", response_model=StatusResponse)
-def status() -> StatusResponse:
+def status(_: None = Depends(require_auth)) -> StatusResponse:
     store = _store_or_404()
     return StatusResponse(
         status="healthy",

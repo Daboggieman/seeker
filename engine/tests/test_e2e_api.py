@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
