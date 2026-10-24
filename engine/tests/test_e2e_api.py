@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-from datetime import UTC, datetime
 from pathlib import Path
 
 from fastapi.testclient import TestClient
 
 from seeker.api.main import create_app
-from seeker.embeddings.backends import MockEmbeddingBackend
 
 
 class TmpDir:
