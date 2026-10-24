@@ -9,7 +9,15 @@ import json
 
 from fastapi import APIRouter, HTTPException, status
 
+from seeker.api.auth import require_auth
 from seeker.api.schemas import (
+    SearchRequest,
+    SearchResponse,
+    SearchResult,
+    SourceRegisterRequest,
+    SourceResponse,
+    StatusResponse,
+)
     SearchRequest,
     SearchResponse,
     SearchResult,

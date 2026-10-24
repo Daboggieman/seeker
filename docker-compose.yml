@@ -1,0 +1,31 @@
+services:
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8420:8420"
+    volumes:
+      - ./data:/data               # sqlite-vec index + config; back this up.
+      - ~/Documents:/sources/home:ro
+    environment:
+      - SEEKER_TOKEN=${SEEKER_TOKEN:?SEEKER_TOKEN is required}
+      - SEEKER_DB_PATH=/data/seeker.db
+      - OLLAMA_HOST=http://host.docker.internal:11434
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # Linux host-gateway resolution
+    restart: unless-stopped
+    depends_on:
+      - tailscale
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    hostname: search-engine
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY:?TS_AUTHKEY is required}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    network_mode: service:engine
+    volumes:
+      - ./ts-state:/var/lib/tailscale
+    restart: unless-stopped
