@@ -8,15 +8,11 @@ Contract (docs/build_docs/04-core-engine-specs.md section 5.4):
 
 from __future__ import annotations
 
-import shutil
 import sqlite3
 import tempfile
 from pathlib import Path
 
-import pytest
-
 from seeker.chunking.chunker import Chunk
-from seeker.connectors.base import RawItem
 from seeker.embeddings.backends import MockEmbeddingBackend
 from seeker.store.index import IndexStore
 
@@ -139,6 +135,7 @@ class TestIndexStoreDocuments:
         with TmpDB() as td:
             store = IndexStore(td.path)
             store.init()
+            store.register_source("fs-test", "filesystem", {})
             store.upsert_document(
                 doc_id="doc-1",
                 source_id="fs-test",
@@ -157,6 +154,7 @@ class TestIndexStoreDocuments:
         with TmpDB() as td:
             store = IndexStore(td.path)
             store.init()
+            store.register_source("fs-test", "filesystem", {})
             store.upsert_document(
                 doc_id="doc-1",
                 source_id="fs-test",
@@ -192,6 +190,16 @@ class TestIndexStoreChunks:
         with TmpDB() as td:
             store = IndexStore(td.path)
             store.init()
+            store.register_source("fs-test", "filesystem", {})
+            store.upsert_document(
+                doc_id="doc-1",
+                source_id="fs-test",
+                path="/tmp/test.txt",
+                title="test",
+                mime_type="text/plain",
+                modified_at="2026-01-01T00:00:00Z",
+                content_hash="abc",
+            )
             store.upsert_chunks([make_chunk("doc-1", 0, "hello world", page=1)])
             conn = td.conn()
             row = conn.execute(
@@ -203,6 +211,7 @@ class TestIndexStoreChunks:
         with TmpDB() as td:
             store = IndexStore(td.path)
             store.init()
+            store.register_source("fs-test", "filesystem", {})
             store.upsert_document(
                 doc_id="doc-1",
                 source_id="fs-test",
@@ -225,6 +234,7 @@ class TestIndexStoreSearch:
         with TmpDB() as td:
             store = IndexStore(td.path)
             store.init()
+            store.register_source("fs-test", "filesystem", {})
             backend = MockEmbeddingBackend()
             # Index a known chunk
             chunk = make_chunk("doc-1", 0, "the quick brown fox jumps over the lazy dog")
@@ -288,6 +298,7 @@ class TestIndexStoreSearch:
         with TmpDB() as td:
             store = IndexStore(td.path)
             store.init()
+            store.register_source("fs-test", "filesystem", {})
             backend = MockEmbeddingBackend()
             long_text = " ".join(f"word{i}" for i in range(200))
             chunk = make_chunk("doc-1", 0, long_text)

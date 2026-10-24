@@ -43,7 +43,7 @@ class IndexStore:
 
     def init(self) -> None:
         """Create all tables if they do not exist.  Idempotent."""
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.executescript(
             """
             CREATE TABLE IF NOT EXISTS sources (
@@ -95,7 +95,7 @@ class IndexStore:
     def register_source(
         self, source_id: str, source_type: str, config: dict[str, Any]
     ) -> None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.execute(
             """
             INSERT INTO sources (id, type, config, status)
@@ -109,7 +109,7 @@ class IndexStore:
         conn.close()
 
     def list_sources(self) -> list[dict[str, Any]]:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         rows = conn.execute(
             "SELECT id, type, config, last_synced_at, status FROM sources"
         ).fetchall()
@@ -127,13 +127,13 @@ class IndexStore:
 
     def delete_source(self, source_id: str) -> None:
         """Remove a source; its documents and chunks cascade."""
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
         conn.commit()
         conn.close()
 
     def update_sync_status(self, source_id: str, status: str) -> None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.execute(
             "UPDATE sources SET status = ?, last_synced_at = ? WHERE id = ?",
             (status, _now_iso(), source_id),
@@ -172,7 +172,7 @@ class IndexStore:
         modified_at: str,
         content_hash: str,
     ) -> None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.execute(
             """
             INSERT INTO documents
@@ -192,7 +192,7 @@ class IndexStore:
         conn.close()
 
     def get_document(self, doc_id: str) -> dict[str, Any] | None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         row = conn.execute(
             f"SELECT {self._DOC_COLS} FROM documents WHERE id = ?", (doc_id,)
         ).fetchone()
@@ -202,7 +202,7 @@ class IndexStore:
         return dict(zip(self._DOC_KEYS, row, strict=True))
 
     def get_documents_by_source(self, source_id: str) -> list[dict[str, Any]]:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         rows = conn.execute(
             f"SELECT {self._DOC_COLS} FROM documents WHERE source_id = ?",
             (source_id,),
@@ -217,7 +217,7 @@ class IndexStore:
         unchanged file must never be re-embedded.  Lookup is scoped by source so
         identical files in different sources are indexed independently.
         """
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         row = conn.execute(
             "SELECT id FROM documents WHERE source_id = ? AND content_hash = ? LIMIT 1",
             (source_id, content_hash),
@@ -226,7 +226,7 @@ class IndexStore:
         return row[0] if row else None
 
     def delete_document(self, doc_id: str) -> None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
         conn.commit()
         conn.close()
@@ -244,7 +244,7 @@ class IndexStore:
     ) -> None:
         if not chunks:
             return
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         for chunk in chunks:
             conn.execute(
                 """
@@ -278,7 +278,7 @@ class IndexStore:
         conn.close()
 
     def delete_chunks_for_document(self, doc_id: str) -> None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         conn.execute("DELETE FROM chunks WHERE document_id = ?", (doc_id,))
         conn.commit()
         conn.close()
@@ -300,7 +300,7 @@ class IndexStore:
         `source_ids` (None = all sources), best match first, each carrying a
         snippet, path, score, and source id per the API contract.
         """
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         # Over-fetch so a source filter applied after the KNN pass still leaves
         # top_k results in most cases.
         fetch_k = top_k * 4 if source_ids else top_k
@@ -324,16 +324,18 @@ class IndexStore:
                 continue
             if source_ids and doc["source_id"] not in source_ids:
                 continue
-            # sqlite-vec distance is cosine distance for normalized vectors:
-            # similarity = 1 - distance.
+            # sqlite-vec distance is cosine distance: similarity = 1 - distance,
+            # clamped to [0, 1] for the API contract ("score" is relevance).
+            similarity = max(0.0, 1.0 - distance)
+            text = doc["text"]
             results.append(
                 {
                     "chunk_id": chunk_id,
                     "document_id": doc["document_id"],
                     "title": doc["title"],
                     "path": doc["path"],
-                    "snippet": (doc["text"][:200] + "...") if len(doc["text"]) > 200 else doc["text"],
-                    "score": round(1.0 - distance, 4),
+                    "snippet": (text[:200] + "...") if len(text) > 200 else text,
+                    "score": round(similarity, 4),
                     "source_id": doc["source_id"],
                 }
             )
@@ -342,7 +344,7 @@ class IndexStore:
         return results
 
     def _chunk_with_document(self, *, chunk_id: str) -> dict[str, Any] | None:
-        conn = _conn(self._path)
+        conn = _connect(self._path)
         row = conn.execute(
             """
             SELECT c.id, c.document_id, c.text,
