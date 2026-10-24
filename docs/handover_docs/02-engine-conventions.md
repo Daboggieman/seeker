@@ -44,3 +44,11 @@ below.
 
 When the code departs from a rule above, record the departure here — what, why, and when —
 so the next session does not "fix" it back.
+
+- **2026-10-24 — mock embeddings before a real backend.** Ollama is not installed on this
+  machine (verified), so Phase 1 starts with a mock embedding backend: deterministic vectors
+  behind the same interface as the future Ollama backend, tagged `embedding_model: "mock"`.
+  This is why the same-model rule matters — a query embedded with mock vectors must never be
+  ANN-searched against `nomic-embed-text` chunks, and the per-chunk model field is what makes
+  that check enforceable. The eval set (recall@5) means nothing until a real backend lands;
+  it measures pipeline plumbing only.

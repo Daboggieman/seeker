@@ -37,6 +37,10 @@ The embedding backend runs on the host, not in the container — the engine reac
 `host.docker.internal:11434`. This keeps model weights out of the container image and lets
 Ollama serve both the engine and any other local model use.
 
+> **Linux note (recorded 2026-10-24):** `host.docker.internal` does not resolve on Linux by
+> default. The compose file will need `extra_hosts: ["host.docker.internal:host-gateway"]`
+> on the engine service — the spec's skeleton was written for Docker Desktop.
+
 ## Security posture
 
 - **No public internet exposure** — Tailscale-only reachability.

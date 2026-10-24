@@ -54,3 +54,29 @@ The engine has zero knowledge of which adapter is calling it.
 | D4 | Tailscale-only reachability | Private networking; no port exposed to the internet |
 | D5 | MCP first, custom UIs later | Validate retrieval quality before UI investment |
 | D6 | Expo for mobile | Reuse Kairo's proven stack |
+| D7 | Repository layout: one repo, `engine/` Python package at the root | Matches the spec's `build: ./engine` compose context; client adapters (mobile, extension, office) become sibling directories later without moving the engine |
+
+## Repository layout
+
+The layout follows from decision D6 and the spec's compose file (`build: ./engine`).
+Phase 1 creates only `engine/`; later phases add their directories without moving anything.
+
+```
+seeker/
+  engine/                     # the core engine — Python package
+    pyproject.toml            # deps, ruff, pytest config; venv at engine/.venv
+    src/seeker/               # connectors/, chunking/, embeddings/, store/, query/, api/, mcp/
+    tests/                    # unit + api tests
+  docker/                     # Phase 2: docker-compose.yml (engine + tailscale)
+  docs/
+    build_docs/               # this planning package
+    handover_docs/            # the running record
+    adr/                      # decision records (created with first ADR)
+  mobile/                     # Phase 3 (Expo)
+  extension/                  # Phase 4 (Manifest V3)
+  office/                     # Phase 5 (Office.js)
+  semantic-search-build-docs.md   # source spec, stays at repo root
+```
+
+The engine runs locally in Phase 1 (`uvicorn` on port 8420, venv-based) — Docker only enters
+at Phase 2 per the roadmap.

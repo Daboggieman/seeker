@@ -10,16 +10,24 @@ re-measure.
 
 ## What is being worked on right now
 
-**Planning and setup, 2026-10-24.** The repository holds the technical build doc
-(`semantic-search-build-docs.md` at the repo root) and the two planning packages. No engine
-code, Docker config, or CI exist yet.
+**Pre-flight for Phase 1, 2026-10-24.** Environment verified: Python 3.12.3, Docker 29.9 +
+Compose v5.6, Expo stack present. **Ollama is not installed on this machine** (no binary, no
+service, nothing on `:11434`) — decided 2026-10-24 to build the engine against a **mock
+embedding backend** and defer the real-backend decision (native install vs Docker sidecar) to
+open decision 9 in
+[`../build_docs/10-open-decisions.md`](../build_docs/10-open-decisions.md). The eval-set
+source directory is also deferred — the user will point at one during Phase 1 (open decision
+10). Repository layout was decided (D6 in
+[`../build_docs/01-architecture-and-stack.md`](../build_docs/01-architecture-and-stack.md)):
+`engine/` Python package at repo root, engine runs locally via uvicorn in Phase 1, Docker
+enters only at Phase 2.
 
 ## Phase board
 
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| 1 — Core engine + MCP server | not started | — | Filesystem connector only; eval set built here |
-| 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar |
+| 1 — Core engine + MCP server | in progress (pre-flight done) | — | Mock embeddings; filesystem connector only |
+| 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
 | 5 — Office add-in | not started | — | Office.js task pane |
@@ -29,12 +37,13 @@ Status is written here as the record of what happened, after it happened — nev
 
 ## Open items
 
+- **Real embedding backend decision** (open decision 9): native Ollama install vs Docker
+  sidecar. The eval set cannot run on mock vectors — recall@5 on mock embeddings measures the
+  pipeline, not retrieval quality.
+- **Eval-set source directory** (open decision 10): user to supply; `~/Documents` is empty.
 - The open decisions in [`../build_docs/10-open-decisions.md`](../build_docs/10-open-decisions.md)
   — query rewriting, reranker, vector-store migration threshold, debounce strategy, resource
   budget, email connector scope — default if not decided, but several are cheaper to decide
   during Phase 1 than after it.
-- The eval set (~20 queries with known-correct documents) does not exist yet; building it is
-  part of Phase 1, and its recall@5 baseline is recorded in
-  [`06-testing-notes.md`](06-testing-notes.md) when it exists.
 - The user commits and pushes outside these sessions (standing constraint, see
   [`README.md`](README.md)).
