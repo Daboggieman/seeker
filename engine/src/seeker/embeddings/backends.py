@@ -37,7 +37,7 @@ def _make_deterministic_vector(text: str, dim: int) -> list[float]:
     backend is not installed.  Vectors tagged `embedding_model: "mock"` cannot be
     ANN-searched against real vectors and the per-chunk model field enforces this.
     """
-    seed = int(hashlib.sha256(text.encode()).hexdigest()[:16], 16)
+    seed = int(hashlib.sha256(text.encode()).hexdigest()[:8], 16)  # fits uint32
     rng = np.random.RandomState(seed)
     raw = rng.randn(dim).astype(np.float64)
     norm = math.sqrt(sum(x * x for x in raw))
