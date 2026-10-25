@@ -8,7 +8,6 @@ SEEKER_TOKEN set, so they exercise the enforced path.
 from __future__ import annotations
 
 import shutil
-import importlib
 import tempfile
 from pathlib import Path
 
@@ -49,7 +48,7 @@ class _TokenEnv:
 
 def _client_with_token(td_path: Path, token: str | None) -> tuple:
     """Build a TestClient; when token is given, send it on every request."""
-    app = create_app(td.path / "test.db")
+    app = create_app(td_path / "test.db")
     client = TestClient(app)
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     return client, headers
@@ -109,7 +108,7 @@ class TestAuthDisabled:
     def test_no_token_env_means_open(self) -> None:
         with TmpDir() as td:
             # Simulate unset SEEKER_TOKEN.
-            with _TokenEnv("") as env:
+            with _TokenEnv(""):
                 auth_module.AUTH_ENABLED = False
                 app = create_app(td.path / "test.db")
                 client = TestClient(app)
