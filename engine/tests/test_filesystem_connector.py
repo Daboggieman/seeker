@@ -164,7 +164,6 @@ class TestFetchContent:
         touch(str(tmp_path / "f.txt"), time.time())
         connector = FilesystemConnector(tmp_path)
         [item] = connector.list_changed_items(None)
-        item.path  # consumed
         os.unlink(item.path)
         with pytest.raises(FileNotFoundError):
             connector.fetch_content(item)

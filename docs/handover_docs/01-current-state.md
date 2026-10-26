@@ -10,8 +10,17 @@ re-measure.
 
 ## What is being worked on right now
 
-**2026-10-26 — chunker bug fixed; universal model backends built; sqlite-vec store built.**
+**2026-10-26 — chunker bug fixed; universal model backends; sqlite-vec store; filesystem connector.**
 
+- **Filesystem connector** (`engine/src/seeker/connectors/`): the common
+  interface (`list_changed_items(since) -> [RawItem]`,
+  `fetch_content(item) -> FetchedContent`) as `base.py`; `FilesystemConnector`
+  walks the source root recursively, incremental by mtime (`since` as
+  ISO-8601 UTC "Z" string, None = full walk). Judgment calls (reversible):
+  dot-files/dirs skipped by default (`include_hidden=True` disables), symlinks
+  never followed, fetch verifies resolved path stays under the source root.
+  Watchdog live events deferred until the pipeline exists to receive them
+  (open decision 4 = its debounce strategy); the pipeline polls for now.
 - **Vector store** (`engine/src/seeker/store/`): sqlite-vec 0.1.9 single-file
   store — documents + chunks tables, `chunk_vectors` vec0 virtual table
   (chunk_id PK, `float[N]`). Enforced in the module: one dimensions value per
