@@ -34,7 +34,7 @@ def extract_segments(content: bytes, mime_type: str) -> list[ExtractedSegment] |
     if mime_type == "application/pdf":
         return _extract_pdf(content)
     if mime_type.startswith("text/"):
-        return [(None, content.decode("utf-8", errors="replace"))]
+        return [ExtractedSegment(page=None, text=content.decode("utf-8", errors="replace"))]
     return None
 
 

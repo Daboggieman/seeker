@@ -113,7 +113,7 @@ class IndexPipeline:
 
         document_id = existing.id if existing else uuid.uuid4().hex
         chunks = self._make_chunks(document_id, segments)
-        vectors = await self._embed_batched([chunk.text for chunk in chunks])
+        vectors = await self._embed_chunk_texts([chunk.text for chunk in chunks])
         stored = [
             StoredChunk(
                 id=chunk.id,

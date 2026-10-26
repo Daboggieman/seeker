@@ -65,14 +65,14 @@ class TestFirstSync:
     def test_indexes_text_files(self, store: VectorStore) -> None:
         connector = FakeConnector(
             {
-                "/docs/budget.txt": (b"Q1 budget was disputed", "text/plain"),
+                "/docs/budget.txt": (b"quarterly budget disagreement memo", "text/plain"),
                 "/docs/recipes.txt": (b"sourdough needs flour and time", "text/plain"),
             }
         )
         stats = run(make_pipeline(store).sync(connector, source_id="fs-home"))
         assert stats.indexed == 2
         assert stats.failed == []
-        hits = search(store, "Q1 budget")
+        hits = search(store, "quarterly budget disagreement")
         assert hits
         assert all(hit.source_id == "fs-home" for hit in hits)
 
