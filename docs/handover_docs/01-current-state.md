@@ -2,13 +2,46 @@
 
 > Phase 1 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
-> (ADR-0001), sqlite-vec vector store, filesystem connector, index pipeline.
-> Next: query API (FastAPI REST), then MCP shim. See the phase board below.
+> (ADR-0001), sqlite-vec vector store, filesystem connector, index pipeline,
+> REST query API, MCP shim. Next: real embedding backend + eval set (both open
+> decisions) to meet the Phase 1 exit criteria. See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
 
 ## What is being worked on right now
+
+**2026-10-26 — query API + MCP shim built and tested; store thread-affinity bug found and fixed.**
+
+- **REST query API** (`engine/src/seeker/api/app.py`, `service.py`): `/v1/search`,
+  `/v1/sources` CRUD + sync, `/v1/status`, anonymous `/v1/health`. Bearer-token auth on every
+  client-engine route (constant-time compare), machine-readable `{"code": ...}` errors,
+  `X-Request-Id` middleware echoing a client-supplied id. The FastAPI-generated OpenAPI doc is
+  the contract of record.
+- **MCP shim** (`engine/src/seeker/mcp/server.py`): `MCPServer` (mcp 2.3.0) mounted at `/mcp`
+  on the same app; tools (`search_documents`, `list_sources`, `reindex_source`) call the same
+  `Engine` methods the REST routes call — no second implementation.
+- **Store bug fixed** (`engine/src/seeker/store/store.py`): the sqlite connection was opened
+  without `check_same_thread=False`, so any store call from a FastAPI threadpool worker, the
+  TestClient portal thread, or an MCP tool thread raised `sqlite3.ProgrammingError` — every
+  authenticated route except health was a 500 in any real use. The cross-thread design intent
+  ("the API layer wraps it in a threadpool") predates the store; the store now matches it.
+  Writes remain serialized by `with self._conn` transactions. Found by the new API tests;
+  every store-touching route is covered by one.
+- **API + MCP tests** (`engine/tests/test_api.py`, `engine/tests/test_mcp.py`): 34 tests —
+  every route with valid/invalid/anonymous calls, validation errors, request-id echo, source
+  filter, top_k, and the MCP tools called via `MCPServer.call_tool` (no HTTP). Ruff B904
+  re-raise chain fixes in `app.py` en route.
+- Suite: **138 tests green, ruff clean (measured 2026-10-26)**. Known flake (pre-existing,
+  unrelated to this work): `test_filesystem_connector.py::
+  TestIncrementalSync::test_since_exact_boundary_excludes_modified_at_same_moment` fails ~1
+  run in 3 — the test's `time.time()` float boundary vs the file's µs-rounded mtime can
+  roundtrip a sub-microsecond delta that flips the comparison. Suggested fix (not applied,
+  user's call): µs-align the boundary (`t = round(time.time(), 6)`) or compare with an
+  epsilon in the connector.
+- Known behavior to decide later (not a bug, matches the code as written): FastAPI's own
+  422 validation errors (e.g. empty `query` string) return FastAPI's default body shape, not
+  the engine's `{"code": ...}` shape — only route-mapped errors do.
 
 **2026-10-26 — chunker bug fixed; universal model backends; sqlite-vec store; filesystem connector; index pipeline.**
 
@@ -81,7 +114,7 @@ enters only at Phase 2.
 |---|---|---|---|
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline tested 2026-10-26 | Mock embeddings + universal OpenAI-compatible backends (ADR-0001); next: query API |
+| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim (34 tests); ruff clean; 2026-10-26 | Code complete. Blocked on: real embedding backend (OD 9), eval-set directory (OD 10), Phase 1 exit validation in Claude Desktop |
 | 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |

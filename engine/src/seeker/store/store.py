@@ -80,7 +80,12 @@ class VectorStore:
         if dimensions <= 0:
             raise ValueError("dimensions must be positive")
         self.dimensions = dimensions
-        self._conn = sqlite3.connect(str(path))
+        # The store is called from more than one thread by design: FastAPI runs
+        # sync routes in a worker-threadpool and the MCP shim runs tools on its
+        # own threads (docs/handover_docs/01-current-state.md, "the API layer
+        # wraps it in a threadpool"). Opt the connection into cross-thread use;
+        # writes are already serialized by `with self._conn` transactions.
+        self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.execute("PRAGMA foreign_keys=ON")
         self._conn.execute("PRAGMA journal_mode=WAL")

@@ -110,10 +110,10 @@ def create_source(
 ) -> dict[str, Any]:
     try:
         record = engine.add_source(body.source_id, body.root_path)
-    except NotADirectoryError:
+    except NotADirectoryError as exc:
         raise _error(
             422, "VALIDATION_ERROR", f"root_path is not a directory: {body.root_path}"
-        )
+        ) from exc
     return _source_dict(record)
 
 
@@ -123,16 +123,16 @@ async def sync_source(
 ) -> dict[str, Any]:
     try:
         return await engine.sync_source(source_id)
-    except SourceNotFoundError:
-        raise _error(404, "SOURCE_NOT_FOUND", f"source {source_id!r} not found")
+    except SourceNotFoundError as exc:
+        raise _error(404, "SOURCE_NOT_FOUND", f"source {source_id!r} not found") from exc
 
 
 @router.delete("/sources/{source_id}", status_code=204, dependencies=[Depends(auth_dep)])
 def delete_source(source_id: str, engine: Annotated[Engine, Depends(engine_dep)]) -> None:
     try:
         engine.delete_source(source_id)
-    except SourceNotFoundError:
-        raise _error(404, "SOURCE_NOT_FOUND", f"source {source_id!r} not found")
+    except SourceNotFoundError as exc:
+        raise _error(404, "SOURCE_NOT_FOUND", f"source {source_id!r} not found") from exc
 
 
 @router.get("/status", dependencies=[Depends(auth_dep)])
