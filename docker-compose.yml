@@ -1,0 +1,46 @@
+services:
+  engine:
+    build: ./engine
+    restart: unless-stopped
+    # Reachable only on the host loopback; the Tailnet path goes through the
+    # Tailscale sidecar (network_mode: service:engine), never a public port.
+    ports:
+      - "127.0.0.1:8420:8420"
+    volumes:
+      - ./data:/data              # sqlite-vec file — the only durable state
+      - ${SEEKER_SOURCES}:/sources/home:ro
+    environment:
+      SEEKER_API_TOKEN: ${SEEKER_API_TOKEN:?set SEEKER_API_TOKEN in .env}
+      SEEKER_DB_PATH: /data/seeker.db
+      SEEKER_EMBEDDING_BACKEND: ${SEEKER_EMBEDDING_BACKEND:-openai}
+      SEEKER_EMBEDDING_MODEL: ${SEEKER_EMBEDDING_MODEL:-nomic-embed-text}
+      SEEKER_EMBEDDING_BASE_URL: ${SEEKER_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
+      SEEKER_EMBEDDING_DIMENSIONS: ${SEEKER_EMBEDDING_DIMENSIONS:-768}
+    # host.docker.internal resolves natively on Docker Desktop; keep the
+    # extra_hosts entry so the same file also runs on plain Linux Docker.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  tailscale:
+    image: tailscale/tailscale:stable
+    hostname: search-engine
+    network_mode: service:engine   # shares the engine's network namespace
+    environment:
+      TS_USERSPACE: "false"
+      TS_OAUTH_CLIENT_ID: ${TS_OAUTH_CLIENT_ID:?set TS_OAUTH_CLIENT_ID in .env}
+      TS_OAUTH_CLIENT_SECRET: ${TS_OAUTH_CLIENT_SECRET:?set TS_OAUTH_CLIENT_SECRET in .env}
+      TS_EXTRA_ARGS: --advertise-tags=tag:seeker
+    volumes:
+      - ./ts-state:/var/lib/tailscale
+    cap_add:
+      - NET_ADMIN
+    restart: unless-stopped
+
+  backup:
+    image: restic/restic:0.17.3
+    env_file: .env
+    volumes:
+      - ./data:/data:ro            # back up the index; never write to it
+      - ./backup.sh:/backup.sh:ro
+    entrypoint: /bin/sh /backup.sh
+    restart: unless-stopped
