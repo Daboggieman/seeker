@@ -195,6 +195,25 @@ class VectorStore:
         ).fetchone()
         return _row_to_document(row) if row else None
 
+    def document_paths_for_source(self, source_id: str) -> dict[str, str]:
+        """path -> document_id for every stored document of one source."""
+        return {
+            row["path"]: row["id"]
+            for row in self._conn.execute(
+                "SELECT path, id FROM documents WHERE source_id = ?", (source_id,)
+            ).fetchall()
+        }
+
+    def chunk_models(self, document_id: str) -> set[str]:
+        """Distinct embedding models across a document's chunks."""
+        return {
+            row["embedding_model"]
+            for row in self._conn.execute(
+                "SELECT DISTINCT embedding_model FROM chunks WHERE document_id = ?",
+                (document_id,),
+            ).fetchall()
+        }
+
     # -- query path ---------------------------------------------------------
 
     def search(
