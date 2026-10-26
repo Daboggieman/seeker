@@ -96,16 +96,6 @@ def _carry_units(pending: list[str], overlap_tokens: int) -> list[str]:
     return carry
 
 
-def _word_carry(prev_text: str, limit: int) -> list[str]:
-    """Fall back to carrying the last `limit` words when no whole unit fits."""
-    if limit <= 0:
-        return []
-    words = prev_text.split()
-    if limit <= 0 or not words:
-        return []
-    return [" ".join(words[-limit:])]
-
-
 def chunk_text(
     text: str,
     document_id: str,
@@ -155,11 +145,14 @@ def chunk_text(
         if i >= len(units):
             break
         carry = _carry_units(pending, overlap_tokens)
-        # Shrink the carry so it fits alongside the next unit without breaking
-        # the max_tokens invariant; drop it if nothing fits.
+        # The carry can come back empty when every unit is larger than the
+        # overlap budget (the common case for paragraph-sized units); fall
+        # back to the previous chunk's trailing words so adjacent chunks still
+        # overlap. Either way the carry must fit alongside the next unit
+        # without breaking the max_tokens invariant, or be dropped.
         next_unit_tokens = count_tokens(units[i])
         room = max_tokens - next_unit_tokens
-        if count_tokens(_join(carry)) > room or room < 1:
+        if not carry or count_tokens(_join(carry)) > room or room < 1:
             carry = _word_carry_fallback(_join(pending), min(overlap_tokens, room))
 
     return chunks
