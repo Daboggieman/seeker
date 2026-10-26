@@ -26,9 +26,7 @@ def client(tmp_path):
     app = create_app(
         EngineSettings(db_path=str(tmp_path / "api.db"), embedding_dimensions=8)
     )
-    return httpx.Client(
-        transport=httpx.ASGITransport(app=app), base_url="http://engine", headers=AUTH
-    )
+    return TestClient(app, raise_server_exceptions=False)
 
 
 def make_source_dir(tmp_path) -> str:
