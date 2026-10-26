@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import mimetypes
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from seeker.connectors.base import FetchedContent, RawItem
@@ -36,7 +36,10 @@ def _since_to_epoch(since: str | None) -> float | None:
 
 
 def _to_iso_utc(epoch_seconds: float) -> str:
-    return datetime.fromtimestamp(epoch_seconds, tz=timezone.utc).isoformat()
+    # Canonical "Z" form; fromisoformat reads it back fine on 3.11+.
+    return datetime.fromtimestamp(epoch_seconds, tz=UTC).isoformat().replace(
+        "+00:00", "Z"
+    )
 
 
 class FilesystemConnector:

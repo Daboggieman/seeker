@@ -8,16 +8,16 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
-from seeker.connectors.base import FetchedContent, RawItem
+from seeker.connectors.base import RawItem
 from seeker.connectors.filesystem import FilesystemConnector
 
 
 def iso_now() -> str:
-    return datetime.now(tz=timezone.utc).isoformat()
+    return datetime.now(tz=UTC).isoformat()
 
 
 def touch(path: str, mtime: float) -> None:
@@ -171,4 +171,4 @@ class TestFetchContent:
 
 
 def _iso(epoch: float) -> str:
-    return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+    return datetime.fromtimestamp(epoch, tz=UTC).isoformat()
