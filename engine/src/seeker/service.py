@@ -34,7 +34,7 @@ def sync_stats_to_dict(stats: SyncStats) -> dict:
 class Engine:
     """Search, source management, and sync — the one engine implementation."""
 
-    def __init__(self, store: VectorStore, embedding_backend, pipeline: IndexPipeline) -> None:
+    def __init__(self, store: VectorStore, embedding_backend, pipeline) -> None:
         self.store = store
         self.backend = embedding_backend
         self.pipeline = pipeline
