@@ -197,7 +197,7 @@ class TestSearch:
         store.replace_chunks(
             "doc-b", [make_chunk("doc-b", "shared phrase there", position=0)]
         )
-        hits = store.search(query, model_name=MODEL, top_k=10, source_id="fs-home")
+        hits = store.search(query, model_name=MODEL, top_k=10, source_ids=["fs-home"])
         assert hits, "expected matches before filtering"
         assert {h.source_id for h in hits} == {"fs-home"}
 

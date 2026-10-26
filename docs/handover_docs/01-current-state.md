@@ -2,17 +2,25 @@
 
 > Phase 1 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
-> (ADR-0001), sqlite-vec vector store, filesystem connector. Next: text
-> extraction + index pipeline, then query API, MCP shim. See the phase board
-> below.
+> (ADR-0001), sqlite-vec vector store, filesystem connector, index pipeline.
+> Next: query API (FastAPI REST), then MCP shim. See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
 
 ## What is being worked on right now
 
-**2026-10-26 — chunker bug fixed; universal model backends; sqlite-vec store; filesystem connector.**
+**2026-10-26 — chunker bug fixed; universal model backends; sqlite-vec store; filesystem connector; index pipeline.**
 
+- **Index pipeline** (`engine/src/seeker/pipeline/`): `extract.py` (text/*
+  decode + PyMuPDF page-tagged PDF extraction; unsupported mimes → None;
+  scanned-PDF OCR is a later phase) and `indexer.py` (`IndexPipeline.sync`):
+  fetch → sha256 `content_hash` gate → chunk (page tags preserved, positions
+  renumbered per document) → batched embed (32/request) → store. Model-switch
+  rule: same hash but chunks carrying another `embedding_model` are
+  re-embedded. Full syncs (`since=None`) prune vanished documents; incremental
+  syncs never prune. One failed file never aborts a sync (`SyncStats.failed`).
+  104 tests green, ruff clean (measured 2026-10-26).
 - **Filesystem connector** (`engine/src/seeker/connectors/`): the common
   interface (`list_changed_items(since) -> [RawItem]`,
   `fetch_content(item) -> FetchedContent`) as `base.py`; `FilesystemConnector`
@@ -73,7 +81,7 @@ enters only at Phase 2.
 |---|---|---|---|
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector tested 2026-10-26 | Mock embeddings + universal OpenAI-compatible backends (ADR-0001); next: index pipeline |
+| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline tested 2026-10-26 | Mock embeddings + universal OpenAI-compatible backends (ADR-0001); next: query API |
 | 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |

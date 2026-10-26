@@ -30,9 +30,17 @@ from pathlib import Path
 
 import sqlite_vec
 
-from seeker.store.records import DocumentRecord, SearchHit, StoredChunk
+from seeker.store.records import DocumentRecord, SearchHit, SourceRecord, StoredChunk
 
 _SCHEMA = """
+CREATE TABLE IF NOT EXISTS sources (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL,
+  root_path TEXT NOT NULL,
+  last_synced_at TEXT,
+  status TEXT NOT NULL DEFAULT 'idle'
+);
+
 CREATE TABLE IF NOT EXISTS documents (
   id TEXT PRIMARY KEY,
   source_id TEXT NOT NULL,
@@ -214,6 +222,61 @@ class VectorStore:
             ).fetchall()
         }
 
+    def counts(self) -> dict[str, int]:
+        """Index sizes for the status endpoint."""
+        documents = self._conn.execute("SELECT count(*) AS n FROM documents").fetchone()[0]
+        chunks = self._conn.execute("SELECT count(*) FROM chunks").fetchone()[0]
+        return {"documents": documents, "chunks": chunks}
+
+    # -- sources -------------------------------------------------------------
+
+    def upsert_source(self, source: SourceRecord) -> None:
+        with self._conn:
+            self._conn.execute(
+                """INSERT INTO sources (id, type, root_path, last_synced_at, status)
+                   VALUES (?, ?, ?, ?, ?)
+                   ON CONFLICT(id) DO UPDATE SET
+                     type=excluded.type,
+                     root_path=excluded.root_path,
+                     last_synced_at=excluded.last_synced_at,
+                     status=excluded.status""",
+                (
+                    source.id,
+                    source.type,
+                    source.root_path,
+                    source.last_synced_at,
+                    source.status,
+                ),
+            )
+
+    def get_source(self, source_id: str) -> SourceRecord | None:
+        row = self._conn.execute(
+            "SELECT * FROM sources WHERE id = ?", (source_id,)
+        ).fetchone()
+        return _row_to_source(row) if row else None
+
+    def list_sources(self) -> list[SourceRecord]:
+        rows = self._conn.execute("SELECT * FROM sources ORDER BY id").fetchall()
+        return [_row_to_source(row) for row in rows]
+
+    def delete_source(self, source_id: str) -> bool:
+        """Remove a source and every document indexed from it."""
+        document_ids = [
+            row["id"]
+            for row in self._conn.execute(
+                "SELECT id FROM documents WHERE source_id = ?", (source_id,)
+            ).fetchall()
+        ]
+        had_documents = bool(document_ids)
+        for document_id in document_ids:
+            self.delete_document(document_id)
+        with self._conn:
+            self._conn.execute("DELETE FROM sources WHERE id = ?", (source_id,))
+        return had_documents
+
+    def close(self) -> None:
+        self._conn.close()
+
     # -- query path ---------------------------------------------------------
 
     def search(
@@ -222,12 +285,12 @@ class VectorStore:
         *,
         model_name: str,
         top_k: int,
-        source_id: str | None = None,
+        source_ids: list[str] | None = None,
     ) -> list[SearchHit]:
         """KNN search restricted to chunks of exactly `model_name`.
 
         The kNN pass runs first (vec0), then the outer query filters by
-        embedding model and optional source — wrong-model chunks can consume
+        embedding model and optional sources — wrong-model chunks can consume
         KNN slots but can never be returned, which upholds the same-model rule
         at the cost of recall when stale-model chunks exist. Re-embedding
         stale chunks is the pipeline's job, not the store's.
@@ -250,9 +313,10 @@ class VectorStore:
               AND c.embedding_model = ?
         """
         params: list[object] = [_serialize(_normalize(query_vector)), top_k, model_name]
-        if source_id is not None:
-            sql += " AND d.source_id = ?"
-            params.append(source_id)
+        if source_ids:
+            marks = ",".join("?" * len(source_ids))
+            sql += f" AND d.source_id IN ({marks})"
+            params.extend(source_ids)
         sql += " ORDER BY v.distance LIMIT ?"
         params.append(top_k)
         rows = self._conn.execute(sql, params).fetchall()
@@ -287,4 +351,14 @@ def _row_to_document(row: sqlite3.Row) -> DocumentRecord:
         modified_at=row["modified_at"],
         indexed_at=row["indexed_at"],
         content_hash=row["content_hash"],
+    )
+
+
+def _row_to_source(row: sqlite3.Row) -> SourceRecord:
+    return SourceRecord(
+        id=row["id"],
+        type=row["type"],
+        root_path=row["root_path"],
+        last_synced_at=row["last_synced_at"],
+        status=row["status"],
     )

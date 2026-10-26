@@ -11,6 +11,17 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
+class SourceRecord:
+    """A registered connector source (docs/build_docs/02-data-model.md)."""
+
+    id: str
+    type: str  # filesystem | gdrive | notion | imap
+    root_path: str
+    last_synced_at: str | None
+    status: str  # idle | syncing | error
+
+
+@dataclass(frozen=True)
 class DocumentRecord:
     id: str
     source_id: str
