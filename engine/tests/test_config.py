@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
+
 import pytest
 
-from seeker.config import EngineSettings, load_settings
+from seeker.config import load_settings
 
 
 class TestDefaults:
@@ -51,5 +53,5 @@ class TestEnvOverride:
 class TestSettingsImmutable:
     def test_engine_settings_is_frozen(self) -> None:
         s = load_settings({})
-        with pytest.raises(Exception):  # frozen dataclass — any mutation
+        with pytest.raises(FrozenInstanceError):
             s.embedding_backend = "openai"  # type: ignore[misc]

@@ -8,7 +8,7 @@ ADR in `docs/adr/` and this table is updated to say so.
 | --- | --- | --- | --- |
 | 1 | Query rewriting — add the rewrite step or keep raw queries? | Skip initially; add only if raw semantic search underperforms on vague queries (per spec §5.5) | Open |
 | 2 | Reranker — include a cross-encoder pass, and which model? | `bge-reranker-base` if recall@5 stalls after tuning chunking | Open |
-| 9 | Embedding backend — Ollama is not installed on this machine (verified 2026-10-24) | **Mock embedding backend first** (deterministic vectors behind the same interface, tagged `embedding_model: "mock"`); decide real backend (native Ollama install vs Docker sidecar) before the eval set runs | Open — blocks eval set, not engine work |
+| 9 | Embedding backend — Ollama is not installed on this machine (verified 2026-10-24) | **Mock embedding backend first** (deterministic vectors behind the same interface, tagged `embedding_model: "mock"`); decide real backend (native Ollama install vs Docker sidecar) before the eval set runs. **Mechanism decided 2026-10-26:** any OpenAI-compatible endpoint via ADR-0001 — which endpoint remains open | Open — blocks eval set, not engine work |
 | 3 | Vector store migration threshold — when does sqlite-vec stop being enough? | Stay on sqlite-vec until metadata-filtered search at larger scale or per-source collection isolation is needed; then Qdrant | Open |
 | 4 | Reindexing debounce strategy for frequently-edited office documents | Debounce (e.g. re-index only if not modified for N minutes after a change event) | Open |
 | 5 | Resource budget for the always-on host (RAM for embedding batches, disk for the vector index) | Decide from measured throughput during Phase 1; record the numbers in handover docs | Open |
