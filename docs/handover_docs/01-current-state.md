@@ -1,15 +1,52 @@
-# Current state — 2026-10-26
+# Current state — 2026-10-29
 
 > Phase 1 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
 > (ADR-0001), sqlite-vec vector store, filesystem connector, index pipeline,
-> REST query API, MCP shim. Next: real embedding backend + eval set (both open
-> decisions) to meet the Phase 1 exit criteria. See the phase board below.
+> REST query API, MCP shim, **real backend via native Ollama (ADR-0002,
+> 2026-10-29)**. Next: eval set — needs the user's source directory (OD 10) —
+> then Phase 1 exit validation in Claude Desktop. See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
 
 ## What is being worked on right now
+
+**2026-10-29 — real backend wired: native Ollama; end-to-end verified with real embeddings.**
+
+- **Decision recorded as ADR-0002**
+  ([`../adr/0002-native-ollama-real-backend.md`](../adr/0002-native-ollama-real-backend.md)):
+  native Ollama at `http://localhost:11434` (server v0.40.13); embeddings =
+  `nomic-embed-text` (pulled 2026-10-29, **768 dims measured** — matches the
+  default `SEEKER_EMBEDDING_DIMENSIONS`); LLM `qwen2.5-coder:7b` configured but
+  unused until query rewriting is enabled (OD 1). Open decision 9 closed in
+  [`../build_docs/10-open-decisions.md`](../build_docs/10-open-decisions.md).
+  "Custom AIs" needed no new code — any OpenAI-compatible provider is a
+  `SEEKER_*` env-var change (ADR-0001), now verified against a real local
+  runtime.
+- **End-to-end verified** (measured 2026-10-29): engine on :8777 with the real
+  config, temp corpus of 3 files → sync returned `indexed: 3, failed: []`;
+  query "how do I keep my bread culture alive" ranked bread.txt top-1 (0.513)
+  over unrelated chunks (0.364 / 0.336) — keyword-free semantic match.
+- **Suite re-verified**: 138 tests green, ruff clean, on a freshly recreated
+  `engine/.venv` — now **Python 3.14** (the venv had vanished again; note the
+  handover previously recorded Python 3.12.3).
+- **Gotchas found (not fixed — user's call):**
+  - Per-file sync failures report only paths in `SyncStats.failed` — no error
+    message anywhere (indexer.py:80 swallows with a bare `except`). The first
+    real-backend sync failure was invisible from the API; diagnosing required
+    reproducing outside the pipeline. Suggested: log or store the exception
+    message per failed file.
+  - Background processes launched from an assistant session (ollama serve,
+    uvicorn) die when the session ends — they must be started detached
+    (`setsid nohup … < /dev/null`) or, durably, as a systemd user unit
+    (not set up; Phase 2's Compose stack is the eventual home).
+  - `data/` is **not** in `.gitignore`; the default `SEEKER_DB_PATH` is the
+    relative `data/seeker.db`, so running the engine from a workdir that
+    isn't ignored would put a live sqlite file on disk where git can see it.
+    Suggested: add `data/` to `.gitignore`.
+  - `/tmp` is cleaned between sessions on this machine — smoke-test corpora
+    and DBs there do not persist.
 
 **2026-10-26 — query API + MCP shim built and tested; store thread-affinity bug found and fixed.**
 
@@ -112,9 +149,7 @@ enters only at Phase 2.
 
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| Phase | Status | Verified | Notes |
-|---|---|---|---|
-| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim (34 tests); ruff clean; 2026-10-26 | Code complete. Blocked on: real embedding backend (OD 9), eval-set directory (OD 10), Phase 1 exit validation in Claude Desktop |
+| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim (34 tests); ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002) | Code complete. Blocked on: eval-set directory (OD 10), Phase 1 exit validation in Claude Desktop |
 | 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
