@@ -49,6 +49,29 @@ def add_and_sync(client: TestClient, source_id: str, root_path: str) -> dict:
     return resp.json()
 
 
+class TestMcpOverHttp:
+    """The MCP shim is mounted on the same app; its transport must actually work."""
+
+    def test_initialize_handshake_succeeds(self, tmp_path) -> None:
+        with make_client(tmp_path) as client:  # `with` runs the app lifespan,
+            resp = client.post(  # which starts the MCP session manager
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test", "version": "0"},
+                    },
+                },
+                headers={"Accept": "application/json, text/event-stream"},
+            )
+        assert resp.status_code == 200
+        assert "seeker" in resp.text  # serverInfo.name from the initialize result
+
+
 class TestAuth:
     def test_missing_token_is_401(self, tmp_path) -> None:
         client = make_client(tmp_path)

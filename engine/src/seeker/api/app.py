@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -158,7 +159,21 @@ def create_app(settings: EngineSettings | None = None) -> FastAPI:
     embedding_backend = build_embedding_backend(settings)
     engine = Engine(store, embedding_backend, IndexPipeline(store, embedding_backend))
 
-    app = FastAPI(title="Seeker Engine", version="0.1.0")
+    # MCP is a translation shim over the same Engine — mounted on this app,
+    # never a second server implementation. The streamable app serves at its
+    # own internal "/mcp" path, so it mounts at the root and POST /mcp reaches
+    # it directly (mounting it under /mcp would double-prefix to /mcp/mcp).
+    mcp_app = build_mcp_server(engine).streamable_http_app()
+
+    @asynccontextmanager
+    async def lifespan(_app: FastAPI):
+        # FastAPI does not run lifespans of mounted sub-apps; without this the
+        # MCP session manager never starts and every /mcp call is a 500
+        # ("Task group is not initialized").
+        async with mcp_app.router.lifespan_context(mcp_app):
+            yield
+
+    app = FastAPI(title="Seeker Engine", version="0.1.0", lifespan=lifespan)
     app.state.engine = engine
     app.state.store = store
     app.state.settings = settings
@@ -171,7 +186,5 @@ def create_app(settings: EngineSettings | None = None) -> FastAPI:
         return response
 
     app.include_router(router)
-    # MCP is a translation shim over the same Engine — mounted on this app,
-    # never a second server implementation.
-    app.mount("/mcp", build_mcp_server(engine).streamable_http_app())
+    app.mount("/", mcp_app)
     return app
