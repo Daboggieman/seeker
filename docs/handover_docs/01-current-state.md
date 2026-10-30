@@ -230,13 +230,17 @@ Status is written here as the record of what happened, after it happened — nev
 
 ## Open items
 
-- **Real embedding backend decision** (open decision 9): native Ollama install vs Docker
-  sidecar. The eval set cannot run on mock vectors — recall@5 on mock embeddings measures the
-  pipeline, not retrieval quality.
-- **Eval-set source directory** (open decision 10): user to supply; `~/Documents` is empty.
+- ~~Real embedding backend decision (open decision 9)~~ — **closed 2026-10-29
+  (ADR-0002)**: native Ollama, `nomic-embed-text`.
+- ~~Eval-set source directory (open decision 10)~~ — **closed 2026-10-30**:
+  `/home/recoding/gsmhub`; baseline recall@5 = 0.50 measured (see the
+  2026-10-30 entry above).
+- **Phase 1 exit validation in Claude Desktop** — the only remaining Phase 1
+  item; user-side (engine already serving MCP on `http://localhost:8420/mcp`).
+- Retrieval tuning is optional post-exit work — open decisions 1 (query
+  rewrite) and 2 (reranker) are the levers; the eval set is the gate.
 - The open decisions in [`../build_docs/10-open-decisions.md`](../build_docs/10-open-decisions.md)
-  — query rewriting, reranker, vector-store migration threshold, debounce strategy, resource
-  budget, email connector scope — default if not decided, but several are cheaper to decide
-  during Phase 1 than after it.
+  — vector-store migration threshold, debounce strategy, resource budget,
+  email connector scope — default if not decided.
 - The user commits and pushes outside these sessions (standing constraint, see
   [`README.md`](README.md)).
