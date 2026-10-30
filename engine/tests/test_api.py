@@ -15,7 +15,9 @@ DEV_TOKEN = "dev-insecure-token"
 AUTH = {"Authorization": f"Bearer {DEV_TOKEN}"}
 
 
-def make_client(tmp_path, token: str = DEV_TOKEN) -> TestClient:
+def make_client(
+    tmp_path, token: str = DEV_TOKEN, base_url: str = "http://testserver"
+) -> TestClient:
     app = create_app(
         EngineSettings(
             db_path=str(tmp_path / "api.db"),
@@ -23,7 +25,7 @@ def make_client(tmp_path, token: str = DEV_TOKEN) -> TestClient:
             api_token=token,
         )
     )
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app, raise_server_exceptions=False, base_url=base_url)
 
 
 @pytest.fixture
@@ -53,8 +55,12 @@ class TestMcpOverHttp:
     """The MCP shim is mounted on the same app; its transport must actually work."""
 
     def test_initialize_handshake_succeeds(self, tmp_path) -> None:
-        with make_client(tmp_path) as client:  # `with` runs the app lifespan,
-            resp = client.post(  # which starts the MCP session manager
+        # base_url with an explicit port so the Host header carries one and
+        # passes the SDK's DNS-rebinding wildcard ("127.0.0.1:*" requires the
+        # colon — a bare "127.0.0.1" host is rejected 421); TestClient's
+        # default host "testserver" would be rejected as well.
+        with make_client(tmp_path, base_url="http://127.0.0.1:8420") as client:
+            resp = client.post(  # `with` runs the app lifespan, which starts
                 "/mcp",
                 json={
                     "jsonrpc": "2.0",

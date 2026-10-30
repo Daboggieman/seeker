@@ -12,6 +12,33 @@ re-measure.
 
 ## What is being worked on right now
 
+**2026-10-29 — MCP over HTTP fixed; engine + Ollama are systemd user services.**
+
+- **MCP-over-HTTP transport fixed** (`engine/src/seeker/api/app.py`) — it had
+  never actually worked over HTTP (the MCP tests bypassed HTTP via
+  `call_tool`). Two bugs: (1) the mcp SDK's streamable app serves at its own
+  internal `/mcp` path, so mounting it at `/mcp` double-prefixed the endpoint
+  to `/mcp/mcp` — fixed by mounting at the root so `POST /mcp` reaches it
+  directly; (2) FastAPI does not run lifespans of mounted sub-apps, so the
+  session manager never started and every MCP call was a 500 ("Task group is
+  not initialized") — fixed by composing the sub-app's lifespan into the
+  parent app's. New API test performs a real MCP `initialize` handshake over
+  HTTP (TestClient needs `with` for lifespans; its Host header must carry a
+  port and be localhost to pass the SDK's DNS-rebinding protection — bare
+  `127.0.0.1` or `testserver` are rejected 421).
+- **Phase 2 note:** the SDK auto-enables rebinding protection allowing only
+  `127.0.0.1:*/localhost:*/[::1]:*` as Host. Access via a Tailscale hostname
+  or IP will be rejected 421 until `transport_security` is widened
+  (`streamable_http_app(transport_security=...)`).
+- **Engine + Ollama run as systemd user services** (user-approved
+  2026-10-30): `~/.config/systemd/user/{ollama,seeker-engine}.service`,
+  config in `~/.config/seeker/engine.env` (edit + `systemctl --user restart
+  seeker-engine`), engine on **:8420** (the port the MCP shim docs already
+  promised), linger enabled (runs at boot, survives session teardowns — the
+  ad-hoc `setsid` launches died at every session boundary, 3× today).
+  Swap any OpenAI-compatible provider by editing the env file (ADR-0001).
+- **Suite: 145 tests green, ruff clean (measured 2026-10-30).**
+
 **2026-10-29 — real backend wired: native Ollama; end-to-end verified with real embeddings.**
 
 - **Decision recorded as ADR-0002**
@@ -47,9 +74,8 @@ re-measure.
   non-venv install; not fixed (user's call).
 - **Remaining gotchas (user's call):**
   - Background processes launched from an assistant session (ollama serve,
-    uvicorn) die when the session ends — they must be started detached
-    (`setsid nohup … < /dev/null`) or, durably, as a systemd user unit
-    (not set up; Phase 2's Compose stack is the eventual home).
+    uvicorn) die when the session ends — superseded 2026-10-30 by the systemd
+    user services above; `setsid nohup` remains the fallback for one-off runs.
   - `data/` is **not** in `.gitignore`; the default `SEEKER_DB_PATH` is the
     relative `data/seeker.db`. The user will handle `.gitignore` themselves
     (2026-10-29: declined the assistant adding it).
@@ -157,7 +183,7 @@ enters only at Phase 2.
 
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim (34 tests); ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002) | Code complete. Blocked on: eval-set directory (OD 10), Phase 1 exit validation in Claude Desktop |
+| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30 | Code complete. Blocked on: eval set (source chosen: ~/gsmhub), Phase 1 exit validation in Claude Desktop |
 | 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
