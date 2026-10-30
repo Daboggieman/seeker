@@ -226,6 +226,40 @@ class TestSources:
         assert resp.status_code == 404
         assert resp.json()["detail"]["code"] == "SOURCE_NOT_FOUND"
 
+    def test_sync_failure_carries_diagnosis(self, tmp_path, client: TestClient) -> None:
+        """A failing file surfaces path/error/reason/suggestion, not a bare path."""
+        import httpx
+
+        from seeker.pipeline.indexer import IndexPipeline
+
+        root = make_source_dir(tmp_path)
+        client.post(
+            "/v1/sources", json={"source_id": "docs", "root_path": root}, headers=AUTH
+        )
+
+        class UnreachableBackend:
+            model_name = "mock"
+            dimensions = 8
+
+            async def embed_documents(self, texts):
+                raise httpx.ConnectError("All connection attempts failed")
+
+            async def embed_query(self, text):
+                raise httpx.ConnectError("All connection attempts failed")
+
+        engine = client.app.state.engine
+        engine.pipeline = IndexPipeline(engine.store, UnreachableBackend())
+
+        resp = client.post("/v1/sources/docs/sync", headers=AUTH)
+        assert resp.status_code == 200
+        stats = resp.json()
+        assert stats["indexed"] == 0
+        failure = stats["failed"][0]
+        assert failure["path"].endswith(".txt")
+        assert "ConnectError" in failure["error"]
+        assert failure["reason"] == "embedding endpoint unreachable"
+        assert "ollama serve" in failure["suggestion"]
+
     def test_delete_source_removes_index(self, tmp_path, client: TestClient) -> None:
         add_and_sync(client, "docs", make_source_dir(tmp_path))
         resp = client.delete("/v1/sources/docs", headers=AUTH)

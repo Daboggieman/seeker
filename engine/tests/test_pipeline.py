@@ -10,11 +10,12 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 
+import httpx
 import pytest
 
 from seeker.connectors.base import FetchedContent, RawItem
 from seeker.embeddings.mock import MockEmbeddingBackend
-from seeker.pipeline.indexer import IndexPipeline
+from seeker.pipeline.indexer import IndexPipeline, _classify_failure
 from seeker.store.store import VectorStore
 
 MODEL = "mock"
@@ -112,7 +113,53 @@ class TestFirstSync:
         )
         stats = run(make_pipeline(store).sync(connector, source_id="fs-home"))
         assert stats.indexed == 1
-        assert stats.failed == ["/docs/broken.txt"]
+        assert len(stats.failed) == 1
+        failure = stats.failed[0]
+        assert failure.path == "/docs/broken.txt"
+        assert failure.error.startswith("OSError:")
+        assert failure.reason == "file could not be read"
+        assert "readable" in failure.suggestion
+
+
+class TestFailureDiagnosis:
+    """Failures carry path + error + best-effort reason + suggested check."""
+
+    def test_unreachable_endpoint_is_classified(self, store: VectorStore) -> None:
+        class UnreachableBackend(MockEmbeddingBackend):
+            async def embed_documents(self, texts):
+                raise httpx.ConnectError("All connection attempts failed")
+
+        connector = FakeConnector({"/docs/a.txt": (b"some content", "text/plain")})
+        pipeline = IndexPipeline(store, UnreachableBackend(dimensions=8))
+        stats = run(pipeline.sync(connector, source_id="fs-home"))
+        assert stats.indexed == 0
+        failure = stats.failed[0]
+        assert failure.reason == "embedding endpoint unreachable"
+        assert "ollama serve" in failure.suggestion
+        assert failure.error.startswith("ConnectError:")
+
+    def test_http_404_names_the_model(self) -> None:
+        response = httpx.Response(404, request=httpx.Request("POST", "http://ep"))
+        exc = httpx.HTTPStatusError("not found", request=response.request, response=response)
+        reason, suggestion = _classify_failure(exc)
+        assert "model not found" in reason
+        assert "SEEKER_EMBEDDING_MODEL" in suggestion
+
+    def test_http_401_names_the_key(self) -> None:
+        response = httpx.Response(401, request=httpx.Request("POST", "http://ep"))
+        exc = httpx.HTTPStatusError("denied", request=response.request, response=response)
+        reason, suggestion = _classify_failure(exc)
+        assert "credentials" in reason
+        assert "SEEKER_EMBEDDING_API_KEY" in suggestion
+
+    def test_timeout_is_classified(self) -> None:
+        reason, _ = _classify_failure(httpx.ReadTimeout("timed out"))
+        assert reason == "embedding request timed out"
+
+    def test_unknown_error_gets_generic_guidance(self) -> None:
+        reason, suggestion = _classify_failure(ValueError("boom"))
+        assert reason == "unexpected error"
+        assert suggestion
 
 
 class TestHashGate:

@@ -27,7 +27,15 @@ def sync_stats_to_dict(stats: SyncStats) -> dict:
         "skipped_unchanged": stats.skipped_unchanged,
         "unsupported": stats.unsupported,
         "pruned": stats.pruned,
-        "failed": stats.failed,
+        "failed": [
+            {
+                "path": f.path,
+                "error": f.error,
+                "reason": f.reason,
+                "suggestion": f.suggestion,
+            }
+            for f in stats.failed
+        ],
     }
 
 

@@ -12,17 +12,21 @@ Contract (docs/build_docs/04-core-engine-specs.md, docs/handover_docs/02-engine-
 - a full sync (since=None) prunes stored documents of the source that the
   walk no longer finds — a full walk is the authoritative snapshot.
 
-Per-item failures never abort a sync: one unreadable file costs one entry in
-`SyncStats.failed`, never the rest of the source.
+Per-item failures never abort a sync: one unreadable file costs one structured
+entry in `SyncStats.failed` (path, error, best-effort reason, suggested check),
+never the rest of the source — and the full traceback lands in the engine log.
 """
 
 from __future__ import annotations
 
 import hashlib
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+
+import httpx
 
 from seeker.chunking.chunker import Chunk, chunk_text
 from seeker.connectors.base import RawItem, SourceConnector
@@ -31,7 +35,24 @@ from seeker.pipeline.extract import ExtractedSegment, extract_segments
 from seeker.store.records import DocumentRecord, StoredChunk
 from seeker.store.store import VectorStore
 
+logger = logging.getLogger(__name__)
+
 _DEFAULT_BATCH_SIZE = 32  # chunks per embed request (spec §5.3 suggests 32)
+
+
+@dataclass(frozen=True)
+class SyncFailure:
+    """One file that failed during sync, with its diagnosis.
+
+    `reason` is best-effort — derived from the exception where it is
+    recognizable, honest "unexpected error" where it is not. `suggestion` is
+    the first thing to check. The traceback itself lives in the engine log.
+    """
+
+    path: str
+    error: str
+    reason: str
+    suggestion: str
 
 
 @dataclass(frozen=True)
@@ -40,7 +61,50 @@ class SyncStats:
     skipped_unchanged: int = 0
     unsupported: int = 0
     pruned: int = 0
-    failed: list[str] = field(default_factory=list)
+    failed: list[SyncFailure] = field(default_factory=list)
+
+
+def _classify_failure(exc: BaseException) -> tuple[str, str]:
+    """Best-effort (reason, suggestion) for a failed file — never a diagnosis.
+
+    Recognizes only what can be recognized honestly (endpoint down, model
+    missing, auth rejected, undecodable text, unreadable file); anything else
+    falls back to generic guidance with the traceback in the engine log.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        if status in (401, 403):
+            return (
+                "embedding endpoint rejected the credentials",
+                "check SEEKER_EMBEDDING_API_KEY against the endpoint",
+            )
+        if status == 404:
+            return (
+                "embedding model not found on the endpoint",
+                "pull or correct SEEKER_EMBEDDING_MODEL (e.g. `ollama pull nomic-embed-text`)",
+            )
+        return (f"embedding endpoint returned HTTP {status}", "check the endpoint's logs")
+    if isinstance(exc, httpx.TimeoutException):
+        return ("embedding request timed out", "check runtime load; smaller batches may help")
+    if isinstance(exc, (httpx.TransportError, ConnectionError)):
+        return (
+            "embedding endpoint unreachable",
+            "confirm the runtime is up (e.g. `ollama serve`) and "
+            "SEEKER_EMBEDDING_BASE_URL points at it",
+        )
+    if isinstance(exc, UnicodeDecodeError):
+        return (
+            "file is not decodable as its declared text mime type",
+            "exclude it from the source or teach extraction its real encoding",
+        )
+    if type(exc).__name__ == "FileDataError" and "pymupdf" in type(exc).__module__:
+        return (
+            "PDF could not be parsed (corrupt or image-only)",
+            "OCR for scanned PDFs is a later phase; otherwise check the file",
+        )
+    if isinstance(exc, OSError):
+        return ("file could not be read", "check that it still exists and is readable")
+    return ("unexpected error", "see the engine log for the full traceback")
 
 
 class IndexPipeline:
@@ -72,12 +136,21 @@ class IndexPipeline:
         """
         items = connector.list_changed_items(since)
         indexed = skipped_unchanged = unsupported = 0
-        failed: list[str] = []
+        failed: list[SyncFailure] = []
         for item in items:
             try:
                 outcome = await self._index_item(connector, item, source_id)
-            except Exception:  # noqa: BLE001 — one bad file must not stop the sync
-                failed.append(item.path)
+            except Exception as exc:  # noqa: BLE001 — one bad file must not stop the sync
+                reason, suggestion = _classify_failure(exc)
+                logger.exception("index failed for %s (%s)", item.path, reason)
+                failed.append(
+                    SyncFailure(
+                        path=item.path,
+                        error=f"{type(exc).__name__}: {exc}",
+                        reason=reason,
+                        suggestion=suggestion,
+                    )
+                )
                 continue
             if outcome == "indexed":
                 indexed += 1
