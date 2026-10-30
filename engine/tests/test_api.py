@@ -72,10 +72,25 @@ class TestMcpOverHttp:
                         "clientInfo": {"name": "test", "version": "0"},
                     },
                 },
-                headers={"Accept": "application/json, text/event-stream"},
+                headers={  # /mcp is token-gated like every REST route
+                    "Accept": "application/json, text/event-stream",
+                    **AUTH,
+                },
             )
         assert resp.status_code == 200
         assert "seeker" in resp.text  # serverInfo.name from the initialize result
+
+    def test_unauthenticated_mcp_rejected(self, tmp_path) -> None:
+        # The MCP mount has no route-level auth of its own; the middleware
+        # must supply the bearer-token gate (same shape as the REST 401s).
+        with make_client(tmp_path, base_url="http://127.0.0.1:8420") as client:
+            resp = client.post(
+                "/mcp",
+                json={"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+                headers={"Accept": "application/json, text/event-stream"},
+            )
+        assert resp.status_code == 401
+        assert resp.json()["detail"]["code"] == "UNAUTHORIZED"
 
 
 class TestAuth:
