@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from seeker.config import EngineSettings, load_settings
@@ -177,6 +178,27 @@ def create_app(settings: EngineSettings | None = None) -> FastAPI:
     app.state.engine = engine
     app.state.store = store
     app.state.settings = settings
+
+    @app.middleware("http")
+    async def mcp_auth(request: Request, call_next):
+        # The MCP mount has no route-level auth of its own (the SDK transport
+        # doesn't check tokens), and standing rule 5 wants the bearer token on
+        # every client-engine call — so /mcp is gated here, same secret and
+        # error shape as the REST routes.
+        if request.url.path.startswith("/mcp"):
+            auth = request.headers.get("Authorization", "")
+            expected = f"Bearer {settings.api_token}"
+            if not secrets.compare_digest(auth, expected):
+                return JSONResponse(
+                    status_code=401,
+                    content={
+                        "detail": {
+                            "code": "UNAUTHORIZED",
+                            "message": "missing or invalid bearer token",
+                        }
+                    },
+                )
+        return await call_next(request)
 
     @app.middleware("http")
     async def request_id(request: Request, call_next):

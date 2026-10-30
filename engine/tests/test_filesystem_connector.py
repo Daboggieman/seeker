@@ -116,7 +116,10 @@ class TestIncrementalSync:
     def test_since_exact_boundary_excludes_modified_at_same_moment(
         self, tmp_path: pytest.TempPathFactory
     ) -> None:
-        t = time.time()
+        # Whole seconds: a sub-second float drifts through the
+        # float→mtime→ISO round trip (os.utime rounds to ns either way),
+        # which made the "exactly at" comparison flaky.
+        t = float(int(time.time()))
         touch(str(tmp_path / "f.txt"), t)
         connector = FilesystemConnector(tmp_path)
         items = connector.list_changed_items(_iso(t))
