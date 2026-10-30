@@ -15,7 +15,7 @@ ADR in `docs/adr/` and this table is updated to say so.
 | 6 | Offline-first (local-embedded engine + sync) | Not worth the complexity unless you regularly need search with zero network access — revisit only then | Open |
 | 7 | Email connector scope (IMAP vs Gmail API, which labels/folders) | Gmail API if the account is Google; filter to specific labels, never index everything | Open |
 | 8 | Bearer-token rotation story | Shared secret in engine config; rotate manually when a device is lost | Open |
-| 10 | First indexed source directory for the eval set (`~/Documents` is empty on this machine) | User will point at a real directory during Phase 1 | Open — user input needed |
+| 10 | First indexed source directory for the eval set (`~/Documents` is empty on this machine) | User will point at a real directory during Phase 1 | **Closed 2026-10-30:** user chose `/home/recoding/gsmhub` (206 docs indexed first run, 961s; baseline recall@5 = 0.50). Connector gained `exclude_dirs` + code-extension mime overrides to make a codebase indexable (node_modules/.next/dist excluded). Per-source exclude config via the REST API remains open as a future need |
 
 ## How to close one
 

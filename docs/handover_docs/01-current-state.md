@@ -2,15 +2,51 @@
 
 > Phase 1 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
-> (ADR-0001), sqlite-vec vector store, filesystem connector, index pipeline,
-> REST query API, MCP shim, **real backend via native Ollama (ADR-0002,
-> 2026-10-29)**. Next: eval set — needs the user's source directory (OD 10) —
-> then Phase 1 exit validation in Claude Desktop. See the phase board below.
+> (ADR-0001), sqlite-vec vector store, filesystem connector (+ exclude_dirs,
+> code-mime fixes), index pipeline (+ structured sync-failure reporting), REST
+> query API, MCP shim (transport fixed 2026-10-29), real backend via native
+> Ollama (ADR-0002, 2026-10-29), systemd user services, **eval set with
+> measured baseline recall@5 = 0.50 (2026-10-30)**. Next: Phase 1 exit
+> validation in Claude Desktop. See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
 
 ## What is being worked on right now
+
+**2026-10-30 — eval set built on the user's corpus; baseline recall@5 = 0.50 (measured).**
+
+- **Corpus** (open decision 10 closed): `/home/recoding/gsmhub` — the user's
+  GSM device-comparison project. First full index: **206 documents, 282
+  chunks, 30 unsupported (json/map/binary), 0 failed, 961 s** with
+  `nomic-embed-text` on CPU (measured 2026-10-30; ~4.7 s/file — one embed
+  request per file is the shape of it; batching across files would be the
+  optimization if throughput ever matters. At this rate a 10k-file corpus
+  would take ~13 h — that is a finding, per build docs 08).
+- **Connector made codebase-capable** (`filesystem.py`, tested): `exclude_dirs`
+  prunes by directory name at any depth (node_modules/dist/playwright-report/
+  test-results for this corpus; default unchanged — nothing excluded), and a
+  code-extension mime override map (`_MIME_OVERRIDES`) fixes Python's
+  mimetypes sending `.ts` → Qt Linguist and `.tsx`/`.jsx`/`.mjs`/`.cjs` →
+  unknown (65 .tsx files were silently unsupported before this).
+- **Eval set** (`engine/eval/`): `queries.json` — 20 query→document pairs
+  authored by a subagent read of the corpus and spot-verified; queries are
+  paraphrases, not filename echoes. `run_eval.py` — indexes (incrementally)
+  and runs the queries through the real backend, prints per-query hits and
+  recall@5. Run: `SEEKER_EMBEDDING_BACKEND=openai … .venv/bin/python
+  eval/run_eval.py` from `engine/`.
+- **Baseline: recall@5 = 10/20 = 0.50 (measured 2026-10-30).** Miss pattern
+  worth knowing before tuning: `seed-prices.ts` (a large, topically sprawling
+  file) crowds top-5 on several device-related misses. The obvious tuning
+  levers are open decisions 1 (query rewrite — qwen2.5-coder is already
+  configured) and 2 (reranker); a change that lowers this number does not
+  ship (standing rule 6).
+- **Suite: 151 tests green, ruff clean (measured 2026-10-30)** — includes the
+  7 new connector tests (mime overrides, exclude_dirs); the known flaky
+  boundary test still fails ~1 run in 3 (documented 2026-10-26, unfixed).
+- **Remaining for Phase 1 exit:** the Claude Desktop validation — user points
+  Claude Desktop at `http://localhost:8420/mcp`, asks a vague question,
+  confirms the right document comes back. Everything engine-side is done.
 
 **2026-10-29 — MCP over HTTP fixed; engine + Ollama are systemd user services.**
 
@@ -183,7 +219,7 @@ enters only at Phase 2.
 
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
-| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30 | Code complete. Blocked on: eval set (source chosen: ~/gsmhub), Phase 1 exit validation in Claude Desktop |
+| 1 — Core engine + MCP server | in progress | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30 | Code complete. Blocked only on: Phase 1 exit validation in Claude Desktop |
 | 2 — Self-hosted deployment | not started | — | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
