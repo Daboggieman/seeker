@@ -13,11 +13,11 @@ Each connector implements a common interface:
 
 | Connector | Mechanism |
 |---|---|
-| **Filesystem** | `watchdog` for live change events; initial full walk on first run |
+| **Filesystem** | `watchdog` for live change events; initial full walk on first run. *Implemented 2026-10-26 as polling (`list_changed_items` by mtime) — watchdog deferred until the pipeline can receive events (open decision 4); also skips dot-dirs, never follows symlinks, and since 2026-10-30 supports `exclude_dirs` + code-extension mime overrides* |
 | **Google Drive** | Drive API v3, OAuth2, incremental sync via `changes.list` |
 | **Notion** | Notion API, paginated `search` + block children fetch |
 | **Email** | IMAP or Gmail API, filtered to specific labels/folders |
-| **PDFs** | PyMuPDF for text-layer PDFs; Tesseract OCR fallback when no text layer detected |
+| **PDFs** | PyMuPDF for text-layer PDFs; Tesseract OCR fallback when no text layer detected — *OCR is a later phase (not built as of 2026-10-30)* |
 
 Launch scope is the filesystem connector. Drive, Notion, and email are later — each one is
 registered as a `source` row and synced independently.

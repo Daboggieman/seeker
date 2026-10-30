@@ -33,7 +33,7 @@ The engine has zero knowledge of which adapter is calling it.
 |---|---|---|
 | Core engine language | Python (FastAPI) | Fits existing Python fluency; FastAPI gives async REST + auto OpenAPI docs |
 | Embedding model | `nomic-embed-text` via Ollama | Runs on your existing local Ollama setup, no external API cost |
-| Optional query rewriting | Local model via Ollama (qwen3:14b or Mistral Large) | Reuse infra already working rather than adding a new dependency |
+| Optional query rewriting | Local model via Ollama (qwen3:14b or Mistral Large) | Reuse infra already working rather than adding a new dependency. *2026-10-30: configured as `qwen2.5-coder:7b` (what the user runs) per ADR-0002; the rewrite step itself is still off — open decision 1* |
 | Vector store | `sqlite-vec` to start; Qdrant if you outgrow it | sqlite-vec = zero ops, single file; Qdrant = filtering + scale later |
 | Reranker (optional) | Small cross-encoder (e.g. `bge-reranker-base`) | Meaningful relevance boost on top-K before returning results |
 | File parsing | PyMuPDF (PDF), `python-docx`/`openpyxl` (Office), `unstructured` (general) | Broad format coverage without hand-rolled parsers |
@@ -54,11 +54,11 @@ The engine has zero knowledge of which adapter is calling it.
 | D4 | Tailscale-only reachability | Private networking; no port exposed to the internet |
 | D5 | MCP first, custom UIs later | Validate retrieval quality before UI investment |
 | D6 | Expo for mobile | Reuse Kairo's proven stack |
-| D7 | Repository layout: one repo, `engine/` Python package at the root | Matches the spec's `build: ./engine` compose context; client adapters (mobile, extension, office) become sibling directories later without moving the engine |
+| D7 | Repository layout: one repo, `engine/` Python package at the root | Matches the spec's `build: ./engine` compose context; client adapters (mobile, extension, office) become sibling directories later without moving the engine. *Live since Phase 1 — `engine/` is the only directory so far* |
 
 ## Repository layout
 
-The layout follows from decision D6 and the spec's compose file (`build: ./engine`).
+The layout follows from decision D7 and the spec's compose file (`build: ./engine`).
 Phase 1 creates only `engine/`; later phases add their directories without moving anything.
 
 ```
@@ -71,7 +71,7 @@ seeker/
   docs/
     build_docs/               # this planning package
     handover_docs/            # the running record
-    adr/                      # decision records (created with first ADR)
+    adr/                      # decision records (ADR-0001, ADR-0002 as of 2026-10-29)
   mobile/                     # Phase 3 (Expo)
   extension/                  # Phase 4 (Manifest V3)
   office/                     # Phase 5 (Office.js)

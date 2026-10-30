@@ -8,7 +8,8 @@ is *meant* to be.
 dates quickly. Everything else is reference and stays true until the thing it describes
 changes.
 
-Last updated: **2026-10-24** — initial setup.
+Last updated: **2026-10-30** — eval set built (baseline recall@5 = 0.50, measured); reference
+docs `03`–`09` below are still planned, not written.
 
 ## The resume point
 
@@ -36,13 +37,13 @@ it elsewhere — multiple copies diverge, and a stale copy is worse than no copy
 |---|---|---|
 | [`01-current-state.md`](01-current-state.md) | Phase board, what is verified and when, open items | Always, first |
 | [`02-engine-conventions.md`](02-engine-conventions.md) | Per-module conventions, the connector/pipeline/query chain, and the departure record | Before adding a connector or route |
-| [`03-data-model-notes.md`](03-data-model-notes.md) | Decisions embedded in the schema, the content-hash gate, the embedding-model invariant | Changing the schema |
-| [`04-module-reference.md`](04-module-reference.md) | Module surface: public interfaces of each component, cross-component calls | Changing a module's logic |
-| [`05-architecture-decisions.md`](05-architecture-decisions.md) | Key decisions and why they were made | Questioning a dependency or an approach |
-| [`06-testing-notes.md`](06-testing-notes.md) | Eval set construction, recall@5 record, test infrastructure decisions | Writing tests or tuning retrieval |
-| [`07-security-notes.md`](07-security-notes.md) | Bearer token handling, credential storage at rest, the Tailscale-only posture | Implementing auth or adding a source |
-| [`08-repo-structure-and-hygiene.md`](08-repo-structure-and-hygiene.md) | Repo hygiene, environment variables, the ADR process | Before git housekeeping |
-| [`09-phase-acceptance.md`](09-phase-acceptance.md) | Phase-by-phase sign-off record | Closing a phase |
+| [`03-data-model-notes.md`](03-data-model-notes.md) *(planned — not yet written; schema decisions currently live in ADRs and `01`'s dated entries)* | Decisions embedded in the schema, the content-hash gate, the embedding-model invariant | Changing the schema |
+| [`04-module-reference.md`](04-module-reference.md) *(planned — not yet written)* | Module surface: public interfaces of each component, cross-component calls | Changing a module's logic |
+| [`05-architecture-decisions.md`](05-architecture-decisions.md) *(planned — not yet written; decided decisions currently live in `../adr/`)* | Key decisions and why they were made | Questioning a dependency or an approach |
+| [`06-testing-notes.md`](06-testing-notes.md) *(planned — not yet written; the eval set lives in `engine/eval/` and its recall@5 record in `01`'s dated entries)* | Eval set construction, recall@5 record, test infrastructure decisions | Writing tests or tuning retrieval |
+| [`07-security-notes.md`](07-security-notes.md) *(planned — not yet written)* | Bearer token handling, credential storage at rest, the Tailscale-only posture | Implementing auth or adding a source |
+| [`08-repo-structure-and-hygiene.md`](08-repo-structure-and-hygiene.md) *(planned — not yet written)* | Repo hygiene, environment variables, the ADR process | Before git housekeeping |
+| [`09-phase-acceptance.md`](09-phase-acceptance.md) *(planned — not yet written; sign-off record currently in `01`'s phase board)* | Phase-by-phase sign-off record | Closing a phase |
 
 ## Keeping it usable
 

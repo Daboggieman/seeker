@@ -13,8 +13,10 @@ Give the following to any coding agent as **standing rules**.
 2. **The engine never knows the client.** Every client is a thin shell around the same
    REST/MCP surface. No client-specific logic in the engine; no second implementation in an
    adapter.
-3. **The MCP layer is a translation shim, not a second implementation.** Each tool proxies to
-   the matching REST endpoint. Business logic never lives in the MCP layer.
+3. **The MCP layer is a translation shim, not a second implementation.** Each tool calls the
+   same implementation the matching REST route calls (in the engine: the shared `Engine`
+   methods — clarified 2026-10-30; see handover `02`'s departure record). Business logic
+   never lives in the MCP layer.
 4. **`content_hash` gates re-embedding.** Never re-embed an unchanged file. A sync that
    re-embeds everything is a bug.
 5. **Store `embedding_model` on every chunk.** A model switch without re-embedding is data

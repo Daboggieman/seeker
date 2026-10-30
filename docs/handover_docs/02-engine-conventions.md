@@ -1,9 +1,8 @@
 # Engine conventions — follow these for every module
 
 These were decided once in the spec. Re-deciding them per component is how the engine ends up
-inconsistent. Everything here binds all modules. Nothing here has been exercised by code yet —
-the first build session is expected to confirm or correct these, and any departure is recorded
-below.
+inconsistent. Everything here binds all modules. They have been exercised by code since
+2026-10-26 (the whole Phase 1 build); corrections and departures are recorded below.
 
 ## Structure rules
 
@@ -52,3 +51,14 @@ so the next session does not "fix" it back.
   ANN-searched against `nomic-embed-text` chunks, and the per-chunk model field is what makes
   that check enforceable. The eval set (recall@5) means nothing until a real backend lands;
   it measures pipeline plumbing only.
+  **Resolved 2026-10-29** (ADR-0002): Ollama installed natively, `nomic-embed-text` is live,
+  the eval set now measures retrieval (baseline recall@5 = 0.50, see `01`). The mock backends
+  remain the zero-setup default for tests and first boot.
+- **2026-10-26 — MCP tools call the shared `Engine` methods directly** rather than proxying
+  over HTTP to the REST routes. The invariant the rules protect is "no second implementation",
+  and that holds: REST routes and MCP tools are thin wrappers over the same `Engine`. Noted
+  because build docs 05 phrase the mechanism as HTTP proxying.
+- **2026-10-29 — per-file sync failures carry structured diagnosis** (`SyncFailure`: path,
+  error, best-effort reason, suggested approach) and are logged with tracebacks; they never
+  abort a sync and never fail silently. Strengthens, not departs: build docs 08's "failure
+  surfaces as an error, never a silent skip".

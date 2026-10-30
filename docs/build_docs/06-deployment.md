@@ -2,6 +2,11 @@
 
 Source of record: spec §8 (Deployment), §10 (Security & Privacy).
 
+> **Phase 1 status (2026-10-30):** this compose stack is Phase 2 work and not built. The
+> engine currently runs natively on the dev machine as systemd **user services**
+> (`ollama.service`, `seeker-engine.service` on `:8420`, config in
+> `~/.config/seeker/engine.env`) — see handover `01`.
+
 ## Docker Compose
 
 ```yaml

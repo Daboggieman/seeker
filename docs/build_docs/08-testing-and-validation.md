@@ -7,6 +7,12 @@ Source of record: spec §11 (Testing & Validation).
 Build a small eval set early: **~20 queries with a known "correct" document each**, drawn from
 your real files. This is the engine's quality bar — not vibes.
 
+**Built 2026-10-30** (`engine/eval/`): `queries.json` (20 query→document pairs over the
+user's gsmhub corpus) and `run_eval.py` (indexes incrementally, runs the queries through the
+real backend, prints per-query hits + recall@5). The recall@5 record itself lives in the
+handover's dated entries ([`../handover_docs/01-current-state.md`](../handover_docs/01-current-state.md))
+— baseline **recall@5 = 0.50, measured 2026-10-30**.
+
 - Track **recall@5** as you tune chunking, embedding batch size, and reranking.
 - Every change to chunking, embedding, or the query pipeline re-runs the eval set.
 - A change that lowers recall@5 on the eval set does not ship, regardless of how it feels.
