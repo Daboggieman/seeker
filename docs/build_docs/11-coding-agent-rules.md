@@ -34,3 +34,9 @@ Give the following to any coding agent as **standing rules**.
 13. **Record non-trivial decisions as ADRs** in `docs/adr/`.
 14. **At the end of each phase,** report: deliverables done, tests added and passing, known
     gaps, and any deviations from this spec.
+15. **One branch per phase.** Phase work happens only on that phase's own branch
+    (`phase_<n>_<name>`); `master` is the integration target a phase's branch merges into
+    when its exit criteria pass, never the place where in-progress phase work lands. Check
+    `git branch --show-current` before starting phase work and switch to the phase's branch
+    first. (Added 2026-10-30, after phase-1 work landed on `master` instead — see handover
+    `01`'s phase board.)

@@ -235,8 +235,11 @@ Status is written here as the record of what happened, after it happened — nev
 - ~~Eval-set source directory (open decision 10)~~ — **closed 2026-10-30**:
   `/home/recoding/gsmhub`; baseline recall@5 = 0.50 measured (see the
   2026-10-30 entry above).
-- **Phase 1 exit validation in Claude Desktop** — the only remaining Phase 1
-  item; user-side (engine already serving MCP on `http://localhost:8420/mcp`).
+- ~~Phase 1 exit validation in Claude Desktop~~ — **closed 2026-10-30**: the
+  user's MCP client is the Claude Code VS Code extension, not Claude Desktop;
+  engine serves MCP on `http://127.0.0.1:8420/mcp` behind the bearer token.
+  Client registration: `claude mcp add --transport http seeker
+  http://127.0.0.1:8420/mcp --header "Authorization: Bearer $SEEKER_API_TOKEN"`.
 - Retrieval tuning is optional post-exit work — open decisions 1 (query
   rewrite) and 2 (reranker) are the levers; the eval set is the gate.
 - The open decisions in [`../build_docs/10-open-decisions.md`](../build_docs/10-open-decisions.md)
