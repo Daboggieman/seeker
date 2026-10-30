@@ -31,20 +31,28 @@ re-measure.
 - **Suite re-verified**: 138 tests green, ruff clean, on a freshly recreated
   `engine/.venv` — now **Python 3.14** (the venv had vanished again; note the
   handover previously recorded Python 3.12.3).
-- **Gotchas found (not fixed — user's call):**
-  - Per-file sync failures report only paths in `SyncStats.failed` — no error
-    message anywhere (indexer.py:80 swallows with a bare `except`). The first
-    real-backend sync failure was invisible from the API; diagnosing required
-    reproducing outside the pipeline. Suggested: log or store the exception
-    message per failed file.
+- **Sync failures are no longer silent (fixed later the same day, 2026-10-29):**
+  `SyncStats.failed` now carries structured `SyncFailure` records — `path`,
+  `error` (type + message), best-effort `reason`, `suggestion` — and the sync
+  API/MCP responses return them (`{"path", "error", "reason", "suggestion"}`),
+  while the full traceback is logged per file. Recognized classes: endpoint
+  unreachable/timeout, HTTP 404 (model missing) / 401-403 (credentials),
+  undecodable text mime, corrupt/image-only PDF, unreadable file; anything else
+  → "unexpected error" + log. Verified live: sync against a dead embedding port
+  returns "embedding endpoint unreachable" + the `ollama serve` suggestion per
+  file. Suite now 144 tests, ruff clean. Note: `httpx` is imported by
+  `pipeline/indexer.py` at runtime but is only declared under `[project.optional-
+  dependencies].dev` in `engine/pyproject.toml` (same is already true of
+  `embeddings/openai_compat.py`) — a packaging gap to close before any
+  non-venv install; not fixed (user's call).
+- **Remaining gotchas (user's call):**
   - Background processes launched from an assistant session (ollama serve,
     uvicorn) die when the session ends — they must be started detached
     (`setsid nohup … < /dev/null`) or, durably, as a systemd user unit
     (not set up; Phase 2's Compose stack is the eventual home).
   - `data/` is **not** in `.gitignore`; the default `SEEKER_DB_PATH` is the
-    relative `data/seeker.db`, so running the engine from a workdir that
-    isn't ignored would put a live sqlite file on disk where git can see it.
-    Suggested: add `data/` to `.gitignore`.
+    relative `data/seeker.db`. The user will handle `.gitignore` themselves
+    (2026-10-29: declined the assistant adding it).
   - `/tmp` is cleaned between sessions on this machine — smoke-test corpora
     and DBs there do not persist.
 
