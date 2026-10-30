@@ -11,7 +11,9 @@ Judgment calls, made 2026-10-26 and open to reversal:
   droppings, cache dirs) — personal source roots are full of them and indexing
   them is noise; pass `include_hidden=True` to disable;
 - symlinks are never followed and symlinked files are skipped — a source
-  mount must never cause reads outside its root.
+  mount must never cause reads outside its root;
+- `exclude_dirs` prunes by directory name at any depth (e.g. `node_modules`,
+  `dist`) — dependency and build trees would otherwise dwarf the real corpus.
 
 `since` is an ISO-8601 UTC timestamp string (None = everything); items are
 compared by filesystem mtime converted to UTC.
@@ -27,6 +29,17 @@ from pathlib import Path
 from seeker.connectors.base import FetchedContent, RawItem
 
 _UNKNOWN_MIME = "application/octet-stream"
+
+# mimetypes.guess_type gets code extensions wrong or missing: `.ts` maps to
+# Qt Linguist (text/vnd.trolltech.linguist), `.tsx`/`.jsx` to nothing. These
+# overrides win over guess_type so source code extracts as text.
+_MIME_OVERRIDES = {
+    ".ts": "text/typescript",
+    ".tsx": "text/typescript",
+    ".jsx": "text/javascript",
+    ".mjs": "text/javascript",
+    ".cjs": "text/javascript",
+}
 
 
 def _since_to_epoch(since: str | None) -> float | None:
@@ -45,12 +58,19 @@ def _to_iso_utc(epoch_seconds: float) -> str:
 class FilesystemConnector:
     """Filesystem source: recursive walk, mtime-incremental, read-only."""
 
-    def __init__(self, root_path: str | Path, *, include_hidden: bool = False) -> None:
+    def __init__(
+        self,
+        root_path: str | Path,
+        *,
+        include_hidden: bool = False,
+        exclude_dirs: frozenset[str] | set[str] = frozenset(),
+    ) -> None:
         root = Path(root_path)
         if not root.is_dir():
             raise NotADirectoryError(f"source root is not a directory: {root}")
         self.root = root.resolve()
         self.include_hidden = include_hidden
+        self.exclude_dirs = frozenset(exclude_dirs)
 
     # -- listing -------------------------------------------------------------
 
@@ -58,9 +78,11 @@ class FilesystemConnector:
         since_epoch = _since_to_epoch(since)
         items: list[RawItem] = []
         for dirpath, dirnames, filenames in os.walk(self.root, followlinks=False):
-            # Mutating dirnames in place prunes hidden dirs from the walk.
+            # Mutating dirnames in place prunes dirs from the walk.
             if not self.include_hidden:
                 dirnames[:] = [d for d in dirnames if not d.startswith(".")]
+            if self.exclude_dirs:
+                dirnames[:] = [d for d in dirnames if d not in self.exclude_dirs]
             base = Path(dirpath)
             for name in filenames:
                 if not self.include_hidden and name.startswith("."):
@@ -86,5 +108,10 @@ class FilesystemConnector:
         resolved = Path(item.path).resolve()
         if not resolved.is_relative_to(self.root):
             raise ValueError(f"item path escapes source root: {item.path}")
-        mime_type = mimetypes.guess_type(resolved.name)[0] or _UNKNOWN_MIME
+        suffix = resolved.suffix
+        mime_type = (
+            _MIME_OVERRIDES.get(suffix)
+            or mimetypes.guess_type(resolved.name)[0]
+            or _UNKNOWN_MIME
+        )
         return FetchedContent(content=resolved.read_bytes(), mime_type=mime_type)

@@ -168,6 +168,53 @@ class TestFetchContent:
         with pytest.raises(FileNotFoundError):
             connector.fetch_content(item)
 
+    @pytest.mark.parametrize(
+        ("name", "expected_mime"),
+        [
+            ("app.ts", "text/typescript"),  # guess_type says Qt Linguist
+            ("component.tsx", "text/typescript"),  # guess_type says None
+            ("comp.jsx", "text/javascript"),  # guess_type says None
+            ("util.mjs", "text/javascript"),
+        ],
+    )
+    def test_code_extension_mime_overrides(
+        self, tmp_path: pytest.TempPathFactory, name: str, expected_mime: str
+    ) -> None:
+        (tmp_path / name).write_bytes(b"export const x = 1")
+        connector = FilesystemConnector(tmp_path)
+        [item] = connector.list_changed_items(None)
+        assert connector.fetch_content(item).mime_type == expected_mime
+
+
+class TestExcludeDirs:
+    def test_excluded_dir_names_are_pruned_at_any_depth(
+        self, tmp_path: pytest.TempPathFactory
+    ) -> None:
+        (tmp_path / "node_modules" / "lib").mkdir(parents=True)
+        (tmp_path / "src" / "node_modules").mkdir(parents=True)
+        (tmp_path / "src" / "deep").mkdir(parents=True)
+        touch(str(tmp_path / "node_modules" / "pkg.js"), time.time())
+        touch(str(tmp_path / "src" / "node_modules" / "dep.js"), time.time())
+        touch(str(tmp_path / "src" / "keep.ts"), time.time())
+        touch(str(tmp_path / "src" / "deep" / "also.ts"), time.time())
+        connector = FilesystemConnector(tmp_path, exclude_dirs={"node_modules"})
+        paths = {i.path for i in connector.list_changed_items(None)}
+        assert paths == {str(tmp_path / "src" / "keep.ts"), str(tmp_path / "src" / "deep" / "also.ts")}
+
+    def test_no_excludes_by_default(self, tmp_path: pytest.TempPathFactory) -> None:
+        (tmp_path / "node_modules").mkdir()
+        touch(str(tmp_path / "node_modules" / "pkg.js"), time.time())
+        touch(str(tmp_path / "a.ts"), time.time())
+        connector = FilesystemConnector(tmp_path)
+        assert len(connector.list_changed_items(None)) == 2
+
+    def test_exclude_dirs_does_not_touch_files(
+        self, tmp_path: pytest.TempPathFactory
+    ) -> None:
+        touch(str(tmp_path / "node_modules.js"), time.time())
+        connector = FilesystemConnector(tmp_path, exclude_dirs={"node_modules"})
+        assert len(connector.list_changed_items(None)) == 1
+
 
 def _iso(epoch: float) -> str:
     return datetime.fromtimestamp(epoch, tz=UTC).isoformat()
