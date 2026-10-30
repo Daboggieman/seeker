@@ -1,0 +1,102 @@
+[
+  {
+    "query": "in the side-by-side spec view, how does the app decide which handset is the better one for a given row?",
+    "path": "backend/src/modules/compare/compare.service.ts",
+    "why": "Only file implementing winner selection: higher/lower-is-better keyword lists, resolutions compared by total pixels, delta badge with units."
+  },
+  {
+    "query": "will the site keep serving pages if the cache server is unreachable?",
+    "path": "backend/src/config/redis.config.ts",
+    "why": "Sole place documenting that Keyv is built with throwOnConnectError/throwOnErrors disabled so a dead Redis degrades to cache misses instead of 500s."
+  },
+  {
+    "query": "raw model strings arrive full of region tags, network bands and storage sizes — where do they get cleaned into proper product names?",
+    "path": "backend/src/common/utils/device-name.util.ts",
+    "why": "cleanName() is the only logic stripping network tokens, country codes, capacity suffixes and alias fragments from model strings."
+  },
+  {
+    "query": "how is the little up/down arrow next to a device's price worked out?",
+    "path": "backend/src/modules/prices/prices.service.ts",
+    "why": "getPriceTrend compares the two most recent entries and returns trend plus percentage; nothing else computes a direction indicator."
+  },
+  {
+    "query": "before we ship, what known defects and security holes have already been catalogued, and in what order should they be tackled?",
+    "path": "docs/build_docs/audit-report-2026-10-20.md",
+    "why": "Only document enumerating confirmed bugs (search 500, broken images, dead price filters, exposed JWT) plus a numbered suggested fix order."
+  },
+  {
+    "query": "does the system pull fresh device data on a schedule without anyone clicking anything?",
+    "path": "backend/src/modules/external-api/sync.service.ts",
+    "why": "Contains the Sunday 03:00 weekly cron with gap-fill semantics and the 200-device deep-sync batch cap; no other code schedules work."
+  },
+  {
+    "query": "if an admin edits something, could their password end up recorded in the change history?",
+    "path": "backend/src/modules/audit-log/audit-log.interceptor.ts",
+    "why": "Only file capturing write operations into audit logs, with sanitizeBody masking password/token/secret fields."
+  },
+  {
+    "query": "what URL should a load balancer ping to confirm the app can actually reach its database?",
+    "path": "backend/src/health.controller.ts",
+    "why": "Defines /health/live versus /health/ready, where ready checks the Mongo connection state and returns 503 when the DB is down."
+  },
+  {
+    "query": "device pictures from a new image CDN render broken — where do I need to allow that host?",
+    "path": "frontend/next.config.ts",
+    "why": "Sole location of the next/image remotePatterns allowlist gating which external image hosts may render."
+  },
+  {
+    "query": "when a visitor loses internet, can they still look at specs they already viewed?",
+    "path": "frontend/public/sw.js",
+    "why": "Service worker implements network-first-then-cache plus old-cache cleanup on activate; the only source of offline browsing behavior."
+  },
+  {
+    "query": "how do we stop a user-typed query containing dots or brackets from breaking pattern matching on the server?",
+    "path": "shared/src/utils/regex.ts",
+    "why": "Definition site of escapeRegExp, the helper every backend and frontend regex search calls to prevent pattern injection."
+  },
+  {
+    "query": "do accented characters in device names survive when turned into URL identifiers?",
+    "path": "shared/src/utils/slug.ts",
+    "why": "Only slug helper that NFD-normalizes and strips diacritics before lowercasing; the backend util merely re-exports it."
+  },
+  {
+    "query": "why is the cheapest-offer badge never awarded across two different currencies?",
+    "path": "frontend/src/components/prices/PriceComparison.tsx",
+    "why": "buildCurrencyGroups groups offers per currency and picks Best Deal only within a group, explicitly refusing cross-currency conversion."
+  },
+  {
+    "query": "how can shoppers narrow the listing by what a phone costs when the price is not stored on the phone record itself?",
+    "path": "backend/src/modules/devices/devices.repository.ts",
+    "why": "latestPriceStages shows the Device doc never holds a price, so filtering/sorting requires a $lookup into the price history collection."
+  },
+  {
+    "query": "if a shopper types a long phrase and nothing matches, does search try anything else?",
+    "path": "backend/src/modules/search/search.service.ts",
+    "why": "Unique fallback that splits a multi-word query into individual words and retries with per-word regexes when the first pass is empty."
+  },
+  {
+    "query": "which screen visualises ad income versus affiliate income over time?",
+    "path": "frontend/src/app/admin/dashboard/page.tsx",
+    "why": "Only file using recharts (AreaChart/PieChart) to draw revenue trends and vendor click share on the admin home."
+  },
+  {
+    "query": "is there an automated browser check that a regular visitor can search and land on a device page?",
+    "path": "e2e/user-flow.spec.ts",
+    "why": "The public-journey Playwright spec (search then open a device detail); the only other e2e spec covers admin login instead."
+  },
+  {
+    "query": "what do I need to sign up for, and get approved for, before the site can start earning money?",
+    "path": "docs/monetization-setup.md",
+    "why": "Only guide covering AdSense site approval, ads.txt, Amazon Associates 180-day rule and Jumia/Kolibri signup steps."
+  },
+  {
+    "query": "which phases of the build are still unfinished?",
+    "path": "ROADMAP.md",
+    "why": "Canonical phase checklist showing testing, deployment and growth phases unchecked while earlier phases are done."
+  },
+  {
+    "query": "why can't I just run the API on the same port the frontend dev server uses?",
+    "path": "docs/handover_docs/getting-started.md",
+    "why": "Explains the backend deliberately runs on 3001 to avoid colliding with Next.js on 3000, plus workspace/env setup for a new developer."
+  }
+]

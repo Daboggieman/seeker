@@ -199,7 +199,10 @@ class TestExcludeDirs:
         touch(str(tmp_path / "src" / "deep" / "also.ts"), time.time())
         connector = FilesystemConnector(tmp_path, exclude_dirs={"node_modules"})
         paths = {i.path for i in connector.list_changed_items(None)}
-        assert paths == {str(tmp_path / "src" / "keep.ts"), str(tmp_path / "src" / "deep" / "also.ts")}
+        assert paths == {
+            str(tmp_path / "src" / "keep.ts"),
+            str(tmp_path / "src" / "deep" / "also.ts"),
+        }
 
     def test_no_excludes_by_default(self, tmp_path: pytest.TempPathFactory) -> None:
         (tmp_path / "node_modules").mkdir()
