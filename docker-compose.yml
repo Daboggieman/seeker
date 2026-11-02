@@ -8,7 +8,6 @@ services:
       - "127.0.0.1:8420:8420"
     volumes:
       - ./data:/data              # sqlite-vec file — the only durable state
-      - ./data:/data              # sqlite-vec file — the only durable state
       - ${SEEKER_SOURCES:?set SEEKER_SOURCES in .env}:/sources/home:ro
     environment:
       SEEKER_API_TOKEN: ${SEEKER_API_TOKEN:-dev-insecure-token}
