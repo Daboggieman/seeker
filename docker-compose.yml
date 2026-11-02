@@ -16,6 +16,9 @@ services:
       SEEKER_EMBEDDING_MODEL: ${SEEKER_EMBEDDING_MODEL:-nomic-embed-text}
       SEEKER_EMBEDDING_BASE_URL: ${SEEKER_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
       SEEKER_EMBEDDING_DIMENSIONS: ${SEEKER_EMBEDDING_DIMENSIONS:-768}
+      # LLM endpoint (query rewrite etc. — open decision 1). Inert while
+      # rewrite is off, but wired so enabling it later needs no compose edit.
+      SEEKER_LLM_BASE_URL: ${SEEKER_LLM_BASE_URL:-http://host.docker.internal:11434}
     # host.docker.internal resolves natively on Docker Desktop; keep the
     # extra_hosts entry so the same file also runs on plain Linux Docker.
     extra_hosts:
