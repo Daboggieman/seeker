@@ -1,18 +1,63 @@
-# Current state — 2026-10-29
+# Current state — 2026-11-03
 
-> Phase 1 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
+> Phase 2 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
 > (ADR-0001), sqlite-vec vector store, filesystem connector (+ exclude_dirs,
 > code-mime fixes), index pipeline (+ structured sync-failure reporting), REST
 > query API, MCP shim (transport fixed 2026-10-29), real backend via native
-> Ollama (ADR-0002, 2026-10-29), systemd user services, **eval set with
-> measured baseline recall@5 = 0.50 (2026-10-30)**. Next: Phase 1 exit
-> validation in Claude Desktop. See the phase board below.
+> Ollama (ADR-0002), systemd user services, eval set (baseline recall@5 =
+> 0.50, 2026-10-30), **deployment stack live on the host: engine container
+> running gsmhub (211 docs / 288 chunks), `SEEKER_EXCLUDE_DIRS` knob added
+> (2026-11-03)**. Next: Tailscale OAuth creds in `.env` → sidecar up →
+> second-device query (the phase-2 exit criterion). See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
 
 ## What is being worked on right now
+
+**2026-11-03 — engine container live on the host; `SEEKER_EXCLUDE_DIRS` added after dist noise found in the deployed index.**
+
+- **Deployment state:** native `seeker-engine.service` stopped (port 8420 freed);
+  the compose engine container serves the gsmhub corpus. The tailscale sidecar
+  is **not running** — compose's `:?` interpolation guards run at parse time
+  for all services, so an engine-only bring-up needs placeholder vars:
+  `TS_OAUTH_CLIENT_ID=dummy TS_OAUTH_CLIENT_SECRET=dummy docker compose up -d
+  --build engine` (worked around; `docker exec seeker-engine-1 …` for one-off
+  commands — `docker compose exec` also trips the guards). Real creds go in
+  `.env`, then plain `docker compose up -d` adds the sidecar without touching
+  the running engine.
+- **gsmhub indexed in the container** (through host Ollama via the docker
+  bridge, `nomic-embed-text`): first full sync 407 indexed / 133 unsupported /
+  2 failed (embedding `ReadTimeout`); retry +30 indexed / 377 unchanged. After
+  the excludes landed: **211 documents / 288 chunks, 196 pruned, 31
+  unsupported, 1 failed** — `frontend/src/components/admin/DeviceForm.tsx`
+  (48.6 KB → many chunks; one embed batch exceeds the timeout on CPU Ollama).
+  It retries on every full sync until it succeeds; 1 file of 212, not a
+  blocker.
+- **`SEEKER_EXCLUDE_DIRS` added (code change, phase-2 branch):** the eval's
+  excludes (`node_modules`, `dist`, `playwright-report`, `test-results`) were
+  hardcoded only in `eval/run_eval.py` — a deployed engine had no way to
+  exclude build output, and the first container index held 407 docs including
+  `backend/dist/*.d.ts` **outranking the real source** for the eval query
+  (rank 43 while the `.ts` wasn't in the top 50). Fix: comma-separated
+  `SEEKER_EXCLUDE_DIRS` in `config.py`, carried on `Engine` and applied at
+  both connector construction sites (`service.py`), passed from
+  `create_app`; compose + `.env.example` + the runbook document it. Suite
+  **157 tests green, ruff clean** (3 new config tests + an end-to-end wiring
+  test `TestExcludeDirsConfig`).
+- **Smoke query on the cleaned index** (eval query 1): compare components
+  rank 9/14 (`CompareBox.tsx`, `ComparisonTable.tsx`); the eval target
+  `backend/src/modules/compare/compare.service.ts` still isn't top-50 —
+  consistent with the measured baseline recall@5 = 0.50 (this is a miss-type
+  query; `seed-prices.ts` crowding top-5 is the documented pattern).
+  Deployment-side artifacts are fixed; retrieval-quality misses are post-exit
+  tuning (OD 1 query rewrite, OD 2 reranker), gated by the eval set.
+- **Remaining for Phase 2 exit:** OAuth client at
+  login.tailscale.com/admin/settings/oauth (Devices: Core, Read+Write) →
+  `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_CLIENT_SECRET` in `.env` → `docker compose
+  up -d` (sidecar joins, node tagged `tag:seeker`) → install Tailscale on a
+  second device → same query from it.
 
 **2026-10-30 — eval set built on the user's corpus; baseline recall@5 = 0.50 (measured).**
 
@@ -220,7 +265,7 @@ enters only at Phase 2.
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
 | 1 — Core engine + MCP server | done | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30. Bearer token on the MCP mount + loopback-only serving verified live 2026-10-30; 153/153 tests | Done — user moved to Phase 2 on 2026-10-30. **Process deviation:** the final phase-1 work landed on `master` instead of `phase_1_core_engine` (branch-per-phase was never written into build docs `11`; rule added there 2026-10-30). Reconciled 2026-11-02: `phase_1_core_engine` now points at `master`; its 14 branch-only commits were verified superseded (incl. `test_auth.py`/`test_e2e_api.py`, which targeted the removed `seeker.api.auth` module — nothing salvageable) |
-| 2 — Self-hosted deployment | in progress | Stack built on `phase-2-self-hosted` (rebased onto master 2026-11-02; dup `./data:/data` volume fixed; `SEEKER_LLM_BASE_URL` wired). **Pre-flight verified 2026-11-02 end-to-end in a container** (health → auth 401 → add source → sync 2 docs through host Ollama via docker bridge → search: correct doc first at 0.893). Ollama rebound to `0.0.0.0` via systemd drop-in so the bridge gateway can reach it (exposure trade-off documented). Runbook: build docs `12`. Remaining for exit: install Tailscale + OAuth creds in `.env`, stop native engine (port 8420), `docker compose up -d`, second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
+| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added — a `dist/*.d.ts` had outranked the real source). Pre-flight verified 2026-11-02 end-to-end (health → auth → add source → sync → search through host Ollama via docker bridge, correct doc first at 0.893). Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 157 tests green, ruff clean (2026-11-03). Remaining for exit: OAuth creds in `.env` → sidecar up → second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
 | 5 — Office add-in | not started | — | Office.js task pane |
