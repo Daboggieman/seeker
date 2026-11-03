@@ -19,6 +19,9 @@ services:
       # Comma-separated directory names pruned from every source (any depth),
       # e.g. build output / dependency trees. Empty = nothing excluded.
       SEEKER_EXCLUDE_DIRS: ${SEEKER_EXCLUDE_DIRS:-}
+      # Extra MCP Host patterns (besides loopback), e.g. the Tailscale
+      # hostname — "search-engine.your-tailnet.ts.net:*". Empty = loopback only.
+      SEEKER_MCP_ALLOWED_HOSTS: ${SEEKER_MCP_ALLOWED_HOSTS:-}
       # LLM endpoint (query rewrite etc. — open decision 1). Inert while
       # rewrite is off, but wired so enabling it later needs no compose edit.
       SEEKER_LLM_BASE_URL: ${SEEKER_LLM_BASE_URL:-http://host.docker.internal:11434}

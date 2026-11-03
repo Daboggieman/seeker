@@ -62,6 +62,14 @@ class TestEnvOverride:
         s = load_settings({"SEEKER_EXCLUDE_DIRS": "dist,,dist,"})
         assert s.exclude_dirs == frozenset({"dist"})
 
+    def test_mcp_allowed_hosts_defaults_empty(self) -> None:
+        s = load_settings({})
+        assert s.mcp_allowed_hosts == ()
+
+    def test_mcp_allowed_hosts_comma_separated(self) -> None:
+        s = load_settings({"SEEKER_MCP_ALLOWED_HOSTS": "search-engine.ts.net:* ,host:8420"})
+        assert s.mcp_allowed_hosts == ("search-engine.ts.net:*", "host:8420")
+
 
 class TestSettingsImmutable:
     def test_engine_settings_is_frozen(self) -> None:

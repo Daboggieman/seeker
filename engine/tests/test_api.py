@@ -20,6 +20,7 @@ def make_client(
     token: str = DEV_TOKEN,
     base_url: str = "http://testserver",
     exclude_dirs: frozenset[str] | set[str] = frozenset(),
+    mcp_allowed_hosts: tuple[str, ...] = (),
 ) -> TestClient:
     app = create_app(
         EngineSettings(
@@ -27,6 +28,7 @@ def make_client(
             embedding_dimensions=8,
             api_token=token,
             exclude_dirs=frozenset(exclude_dirs),
+            mcp_allowed_hosts=mcp_allowed_hosts,
         )
     )
     return TestClient(app, raise_server_exceptions=False, base_url=base_url)
