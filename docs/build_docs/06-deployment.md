@@ -2,9 +2,13 @@
 
 Source of record: spec §8 (Deployment), §10 (Security & Privacy).
 
-> **Phase 1 status (2026-10-30):** this compose stack is Phase 2 work and not built. The
-> engine currently runs natively on the dev machine as systemd **user services**
-> (`ollama.service`, `seeker-engine.service` on `:8420`, config in
+> **Phase 2 status (2026-11-02):** this stack is built on the `phase-2-self-hosted` branch
+> and pre-flight verified end-to-end in a container (bring-up, sync, search through host
+> Ollama). Operational runbook: [`12-self-hosted-deployment.md`](12-self-hosted-deployment.md)
+> — incl. the Ollama-bind fix and the native-engine port conflict. Pending for exit:
+> Tailscale install + OAuth credentials, then the second-device query. Until the stack
+> replaces it, the engine also runs natively on the dev machine as systemd **user
+> services** (`ollama.service`, `seeker-engine.service` on `:8420`, config in
 > `~/.config/seeker/engine.env`) — see handover `01`.
 
 ## Docker Compose
