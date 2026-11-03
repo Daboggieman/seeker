@@ -3,11 +3,13 @@
 Operational companion to [`06-deployment.md`](06-deployment.md) (architecture & security
 posture). Referenced by `backup.sh` and `.env.example`.
 
-> **Status (2026-11-02):** the compose stack is built on the `phase-2-self-hosted` branch
-> and pre-flight verified end-to-end in a container (health → auth → add source → sync →
-> search; correct document ranked first through host Ollama via the docker bridge).
-> Exit criterion — the same query from a second Tailnet device — is pending: Tailscale is
-> not installed on the host and `.env` lacks the OAuth client credentials.
+> **Status (2026-11-03):** the engine container is **live on the host** — native
+> `seeker-engine.service` stopped, `gsmhub` corpus indexed through host Ollama via the
+> docker bridge (pre-flight verified end-to-end 2026-11-02: health → auth → add source →
+> sync → search). `SEEKER_EXCLUDE_DIRS` added 2026-11-03 after build artifacts
+> (`dist/*.d.ts`) were found outranking real sources in the deployed index.
+> Exit criterion — the same query from a second Tailnet device — is pending: Tailscale
+> is not installed on the host and `.env` lacks the OAuth client credentials.
 
 ## Bring-up
 
@@ -20,6 +22,9 @@ docker compose up -d          # engine + tailscale sidecar + restic backup
 - The engine publishes only `127.0.0.1:8420` on the host; Tailnet clients reach it through
   the Tailscale sidecar, which shares the engine's network namespace.
 - `SEEKER_SOURCES` is mounted read-only at `/sources/home` (standing rule 7).
+- `SEEKER_EXCLUDE_DIRS` (comma-separated) prunes directories from every source at any
+  depth — set it for code corpora, or `dist/`, `node_modules/` and friends land in the
+  index and crowd results (found 2026-11-02: a `dist/*.d.ts` outranked the real source).
 - First run: `POST /v1/sources` with `root_path=/sources/home`, then sync.
 
 ### Prerequisite — Ollama must be reachable from the container

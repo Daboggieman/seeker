@@ -2,14 +2,16 @@
 
 Source of record: spec §8 (Deployment), §10 (Security & Privacy).
 
-> **Phase 2 status (2026-11-02):** this stack is built on the `phase-2-self-hosted` branch
-> and pre-flight verified end-to-end in a container (bring-up, sync, search through host
-> Ollama). Operational runbook: [`12-self-hosted-deployment.md`](12-self-hosted-deployment.md)
-> — incl. the Ollama-bind fix and the native-engine port conflict. Pending for exit:
-> Tailscale install + OAuth credentials, then the second-device query. Until the stack
-> replaces it, the engine also runs natively on the dev machine as systemd **user
-> services** (`ollama.service`, `seeker-engine.service` on `:8420`, config in
-> `~/.config/seeker/engine.env`) — see handover `01`.
+> **Phase 2 status (2026-11-03):** the engine container is **live on the host** (native
+> engine stopped; gsmhub corpus indexed through host Ollama via the docker bridge;
+> pre-flight verified end-to-end 2026-11-02). `SEEKER_EXCLUDE_DIRS` (new 2026-11-03)
+> prunes build-output dirs from every source — set it for code corpora. Operational
+> runbook: [`12-self-hosted-deployment.md`](12-self-hosted-deployment.md) — incl. the
+> Ollama-bind fix and the native-engine port conflict. Pending for exit: Tailscale
+> install + OAuth credentials in `.env`, then the second-device query. Until the stack
+> was deployed, the engine ran natively as systemd **user** services
+> (`ollama.service` still does; `seeker-engine.service` on `:8420` is stopped while the
+> container holds the port, config in `~/.config/seeker/engine.env`) — see handover `01`.
 
 ## Docker Compose
 
