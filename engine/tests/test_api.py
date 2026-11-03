@@ -16,13 +16,17 @@ AUTH = {"Authorization": f"Bearer {DEV_TOKEN}"}
 
 
 def make_client(
-    tmp_path, token: str = DEV_TOKEN, base_url: str = "http://testserver"
+    tmp_path,
+    token: str = DEV_TOKEN,
+    base_url: str = "http://testserver",
+    exclude_dirs: frozenset[str] | set[str] = frozenset(),
 ) -> TestClient:
     app = create_app(
         EngineSettings(
             db_path=str(tmp_path / "api.db"),
             embedding_dimensions=8,
             api_token=token,
+            exclude_dirs=frozenset(exclude_dirs),
         )
     )
     return TestClient(app, raise_server_exceptions=False, base_url=base_url)
@@ -329,3 +333,21 @@ class TestStatus:
         assert body["documents"] == 2
         assert body["chunks"] >= 2
         assert body["sources"][0]["id"] == "docs"
+
+
+class TestExcludeDirsConfig:
+    """SEEKER_EXCLUDE_DIRS must reach the connector the pipeline actually uses."""
+
+    def test_excluded_dir_not_indexed(self, tmp_path) -> None:
+        root = tmp_path / "proj"
+        root.mkdir()
+        (root / "keep.txt").write_text("quarterly budget disagreement memo")
+        build = root / "dist"
+        build.mkdir()
+        (build / "bundle.txt").write_text("quarterly budget disagreement memo")
+        client = make_client(tmp_path, exclude_dirs={"dist"})
+        add_and_sync(client, "proj", str(root))
+        search = client.post("/v1/search", json={"query": "budget"}, headers=AUTH)
+        paths = [r["path"] for r in search.json()["results"]]
+        assert any(p.endswith("/keep.txt") for p in paths)
+        assert not any("/dist/" in p for p in paths)

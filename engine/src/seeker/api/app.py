@@ -158,7 +158,12 @@ def create_app(settings: EngineSettings | None = None) -> FastAPI:
     db.parent.mkdir(parents=True, exist_ok=True)
     store = VectorStore(db, dimensions=settings.embedding_dimensions)
     embedding_backend = build_embedding_backend(settings)
-    engine = Engine(store, embedding_backend, IndexPipeline(store, embedding_backend))
+    engine = Engine(
+        store,
+        embedding_backend,
+        IndexPipeline(store, embedding_backend),
+        exclude_dirs=settings.exclude_dirs,
+    )
 
     # MCP is a translation shim over the same Engine — mounted on this app,
     # never a second server implementation. The streamable app serves at its
