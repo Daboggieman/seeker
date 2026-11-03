@@ -93,7 +93,8 @@ class Engine:
 
     def add_source(self, source_id: str, root_path: str) -> SourceRecord:
         """Register a filesystem source; validates the root exists."""
-        connector = FilesystemConnector(root_path, exclude_dirs=self.exclude_dirs)  # raises NotADirectoryError
+        # raises NotADirectoryError
+        connector = FilesystemConnector(root_path, exclude_dirs=self.exclude_dirs)
         record = SourceRecord(
             id=source_id,
             type="filesystem",
