@@ -98,6 +98,51 @@ class TestMcpOverHttp:
         assert resp.status_code == 401
         assert resp.json()["detail"]["code"] == "UNAUTHORIZED"
 
+    def test_non_loopback_host_rejected_without_config(self, tmp_path) -> None:
+        # The SDK's DNS-rebinding guard auto-enables only loopback hosts;
+        # a Tailnet hostname is rejected 421 until the deployment widens it.
+        with make_client(tmp_path, base_url="http://search-engine.ts.net:8420") as client:
+            resp = client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test", "version": "0"},
+                    },
+                },
+                headers={"Accept": "application/json, text/event-stream", **AUTH},
+            )
+        assert resp.status_code == 421
+
+    def test_configured_tailnet_host_handshake_succeeds(self, tmp_path) -> None:
+        # SEEKER_MCP_ALLOWED_HOSTS widens the guard while keeping it on:
+        # the loopback entries survive and the named host pattern passes.
+        with make_client(
+            tmp_path,
+            base_url="http://search-engine.ts.net:8420",
+            mcp_allowed_hosts=("search-engine.ts.net:*",),
+        ) as client:
+            resp = client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test", "version": "0"},
+                    },
+                },
+                headers={"Accept": "application/json, text/event-stream", **AUTH},
+            )
+        assert resp.status_code == 200
+        assert "seeker" in resp.text
+
 
 class TestAuth:
     def test_missing_token_is_401(self, tmp_path) -> None:

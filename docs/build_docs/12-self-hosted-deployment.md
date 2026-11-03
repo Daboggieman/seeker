@@ -25,6 +25,9 @@ docker compose up -d          # engine + tailscale sidecar + restic backup
 - `SEEKER_EXCLUDE_DIRS` (comma-separated) prunes directories from every source at any
   depth — set it for code corpora, or `dist/`, `node_modules/` and friends land in the
   index and crowd results (found 2026-11-02: a `dist/*.d.ts` outranked the real source).
+- `SEEKER_MCP_ALLOWED_HOSTS` (comma-separated, e.g. `search-engine.your-tailnet.ts.net:*`)
+  widens the MCP transport's DNS-rebinding guard beyond loopback — required before the
+  second-device MCP query (REST `/v1/search` is unaffected by the guard).
 - First run: `POST /v1/sources` with `root_path=/sources/home`, then sync.
 
 ### Prerequisite — Ollama must be reachable from the container
@@ -81,7 +84,7 @@ single shared secret at personal scale.
 | Symptom | Cause / fix |
 |---|---|
 | Sync fails: connection refused to `host.docker.internal:11434` | Ollama bound to loopback only — apply the drop-in above |
-| `POST /mcp` → 421 / 400 from SDK | Host header lacks a port (SDK DNS-rebinding guard); clients should send `http://<host>:8420/mcp` |
+| `POST /mcp` → 421 / 400 from SDK | Host header rejected by the SDK's DNS-rebinding guard. Loopback always passes (`Host` must carry a port: `http://127.0.0.1:8420/mcp`). For a Tailscale hostname, set `SEEKER_MCP_ALLOWED_HOSTS` in `.env` (e.g. `search-engine.your-tailnet.ts.net:*`) and `docker compose up -d engine` to apply |
 | Compose up fails: `TS_OAUTH_CLIENT_ID is missing` | Required `.env` guard working as intended; create an OAuth client at login.tailscale.com scoped to `tag:seeker` |
 | Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it |
 | `backup` logs `restic backup failed` every interval | Repository not initialized — run `docker compose run --rm backup sh -c 'restic init'` once (it loops forever by design; check `docker compose logs backup`) |

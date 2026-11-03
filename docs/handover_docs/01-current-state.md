@@ -53,11 +53,20 @@ re-measure.
   query; `seed-prices.ts` crowding top-5 is the documented pattern).
   Deployment-side artifacts are fixed; retrieval-quality misses are post-exit
   tuning (OD 1 query rewrite, OD 2 reranker), gated by the eval set.
+- **`SEEKER_MCP_ALLOWED_HOSTS` added (code change, same round):** the MCP
+  SDK's DNS-rebinding guard auto-enables only for loopback hosts, so the
+  second-device MCP query would have been rejected 421 (REST is unaffected).
+  The knob passes explicit `TransportSecuritySettings` — loopback entries
+  preserved + the configured patterns (exact `host:port` or port-wildcard
+  `host:*`; the SDK has no suffix wildcards); unset keeps the SDK default.
+  Wiring test proves 421 without / 200 with the config. Suite now
+  **161 tests green, ruff clean** (2026-11-03).
 - **Remaining for Phase 2 exit:** OAuth client at
   login.tailscale.com/admin/settings/oauth (Devices: Core, Read+Write) →
   `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_CLIENT_SECRET` in `.env` → `docker compose
-  up -d` (sidecar joins, node tagged `tag:seeker`) → install Tailscale on a
-  second device → same query from it.
+  up -d` (sidecar joins, node tagged `tag:seeker`) → set
+  `SEEKER_MCP_ALLOWED_HOSTS` to the Tailnet hostname + restart engine →
+  install Tailscale on a second device → same query from it.
 
 **2026-10-30 — eval set built on the user's corpus; baseline recall@5 = 0.50 (measured).**
 
