@@ -42,10 +42,17 @@ def sync_stats_to_dict(stats: SyncStats) -> dict:
 class Engine:
     """Search, source management, and sync — the one engine implementation."""
 
-    def __init__(self, store: VectorStore, embedding_backend, pipeline) -> None:
+    def __init__(
+        self,
+        store: VectorStore,
+        embedding_backend,
+        pipeline,
+        exclude_dirs: frozenset[str] | set[str] = frozenset(),
+    ) -> None:
         self.store = store
         self.backend = embedding_backend
         self.pipeline = pipeline
+        self.exclude_dirs = frozenset(exclude_dirs)
 
     # -- search --------------------------------------------------------------
 
@@ -86,7 +93,8 @@ class Engine:
 
     def add_source(self, source_id: str, root_path: str) -> SourceRecord:
         """Register a filesystem source; validates the root exists."""
-        connector = FilesystemConnector(root_path)  # raises NotADirectoryError
+        # raises NotADirectoryError
+        connector = FilesystemConnector(root_path, exclude_dirs=self.exclude_dirs)
         record = SourceRecord(
             id=source_id,
             type="filesystem",
@@ -114,7 +122,7 @@ class Engine:
     def connector_for(self, source: SourceRecord) -> FilesystemConnector:
         if source.type != "filesystem":
             raise ValueError(f"unsupported source type: {source.type!r}")
-        return FilesystemConnector(source.root_path)
+        return FilesystemConnector(source.root_path, exclude_dirs=self.exclude_dirs)
 
     async def sync_source(self, source_id: str) -> dict:
         """Run a full sync for one registered source; updates its status row."""

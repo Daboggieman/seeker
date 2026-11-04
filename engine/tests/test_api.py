@@ -16,13 +16,19 @@ AUTH = {"Authorization": f"Bearer {DEV_TOKEN}"}
 
 
 def make_client(
-    tmp_path, token: str = DEV_TOKEN, base_url: str = "http://testserver"
+    tmp_path,
+    token: str = DEV_TOKEN,
+    base_url: str = "http://testserver",
+    exclude_dirs: frozenset[str] | set[str] = frozenset(),
+    mcp_allowed_hosts: tuple[str, ...] = (),
 ) -> TestClient:
     app = create_app(
         EngineSettings(
             db_path=str(tmp_path / "api.db"),
             embedding_dimensions=8,
             api_token=token,
+            exclude_dirs=frozenset(exclude_dirs),
+            mcp_allowed_hosts=mcp_allowed_hosts,
         )
     )
     return TestClient(app, raise_server_exceptions=False, base_url=base_url)
@@ -91,6 +97,51 @@ class TestMcpOverHttp:
             )
         assert resp.status_code == 401
         assert resp.json()["detail"]["code"] == "UNAUTHORIZED"
+
+    def test_non_loopback_host_rejected_without_config(self, tmp_path) -> None:
+        # The SDK's DNS-rebinding guard auto-enables only loopback hosts;
+        # a Tailnet hostname is rejected 421 until the deployment widens it.
+        with make_client(tmp_path, base_url="http://search-engine.ts.net:8420") as client:
+            resp = client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test", "version": "0"},
+                    },
+                },
+                headers={"Accept": "application/json, text/event-stream", **AUTH},
+            )
+        assert resp.status_code == 421
+
+    def test_configured_tailnet_host_handshake_succeeds(self, tmp_path) -> None:
+        # SEEKER_MCP_ALLOWED_HOSTS widens the guard while keeping it on:
+        # the loopback entries survive and the named host pattern passes.
+        with make_client(
+            tmp_path,
+            base_url="http://search-engine.ts.net:8420",
+            mcp_allowed_hosts=("search-engine.ts.net:*",),
+        ) as client:
+            resp = client.post(
+                "/mcp",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-03-26",
+                        "capabilities": {},
+                        "clientInfo": {"name": "test", "version": "0"},
+                    },
+                },
+                headers={"Accept": "application/json, text/event-stream", **AUTH},
+            )
+        assert resp.status_code == 200
+        assert "seeker" in resp.text
 
 
 class TestAuth:
@@ -329,3 +380,21 @@ class TestStatus:
         assert body["documents"] == 2
         assert body["chunks"] >= 2
         assert body["sources"][0]["id"] == "docs"
+
+
+class TestExcludeDirsConfig:
+    """SEEKER_EXCLUDE_DIRS must reach the connector the pipeline actually uses."""
+
+    def test_excluded_dir_not_indexed(self, tmp_path) -> None:
+        root = tmp_path / "proj"
+        root.mkdir()
+        (root / "keep.txt").write_text("quarterly budget disagreement memo")
+        build = root / "dist"
+        build.mkdir()
+        (build / "bundle.txt").write_text("quarterly budget disagreement memo")
+        client = make_client(tmp_path, exclude_dirs={"dist"})
+        add_and_sync(client, "proj", str(root))
+        search = client.post("/v1/search", json={"query": "budget"}, headers=AUTH)
+        paths = [r["path"] for r in search.json()["results"]]
+        assert any(p.endswith("/keep.txt") for p in paths)
+        assert not any("/dist/" in p for p in paths)

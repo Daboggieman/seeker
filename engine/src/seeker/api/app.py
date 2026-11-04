@@ -20,6 +20,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from mcp.server.transport_security import TransportSecuritySettings
 from pydantic import BaseModel, Field
 
 from seeker.config import EngineSettings, load_settings
@@ -158,13 +159,36 @@ def create_app(settings: EngineSettings | None = None) -> FastAPI:
     db.parent.mkdir(parents=True, exist_ok=True)
     store = VectorStore(db, dimensions=settings.embedding_dimensions)
     embedding_backend = build_embedding_backend(settings)
-    engine = Engine(store, embedding_backend, IndexPipeline(store, embedding_backend))
+    engine = Engine(
+        store,
+        embedding_backend,
+        IndexPipeline(store, embedding_backend),
+        exclude_dirs=settings.exclude_dirs,
+    )
 
     # MCP is a translation shim over the same Engine — mounted on this app,
     # never a second server implementation. The streamable app serves at its
     # own internal "/mcp" path, so it mounts at the root and POST /mcp reaches
     # it directly (mounting it under /mcp would double-prefix to /mcp/mcp).
-    mcp_app = build_mcp_server(engine).streamable_http_app()
+    #
+    # Transport security: the SDK auto-enables DNS-rebinding protection only
+    # for loopback hosts; any other Host header is rejected 421. When the
+    # deployment names extra hosts (a Tailscale hostname, say), pass explicit
+    # settings with the same loopback entries plus the configured ones —
+    # protection stays on, just widened. With none configured, keep the SDK
+    # default (loopback-only) so local zero-setup behavior is unchanged.
+    if settings.mcp_allowed_hosts:
+        allowed_hosts = ["127.0.0.1:*", "localhost:*", "[::1]:*", *settings.mcp_allowed_hosts]
+        mcp_security = TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=allowed_hosts,
+            # Browser clients (MCP inspector) send Origin; non-browser ones
+            # omit it, which always passes. Derive from the same hosts.
+            allowed_origins=[f"http://{h}" for h in allowed_hosts],
+        )
+    else:
+        mcp_security = None
+    mcp_app = build_mcp_server(engine).streamable_http_app(transport_security=mcp_security)
 
     @asynccontextmanager
     async def lifespan(_app: FastAPI):

@@ -16,6 +16,12 @@ services:
       SEEKER_EMBEDDING_MODEL: ${SEEKER_EMBEDDING_MODEL:-nomic-embed-text}
       SEEKER_EMBEDDING_BASE_URL: ${SEEKER_EMBEDDING_BASE_URL:-http://host.docker.internal:11434}
       SEEKER_EMBEDDING_DIMENSIONS: ${SEEKER_EMBEDDING_DIMENSIONS:-768}
+      # Comma-separated directory names pruned from every source (any depth),
+      # e.g. build output / dependency trees. Empty = nothing excluded.
+      SEEKER_EXCLUDE_DIRS: ${SEEKER_EXCLUDE_DIRS:-}
+      # Extra MCP Host patterns (besides loopback), e.g. the Tailscale
+      # hostname — "search-engine.your-tailnet.ts.net:*". Empty = loopback only.
+      SEEKER_MCP_ALLOWED_HOSTS: ${SEEKER_MCP_ALLOWED_HOSTS:-}
       # LLM endpoint (query rewrite etc. — open decision 1). Inert while
       # rewrite is off, but wired so enabling it later needs no compose edit.
       SEEKER_LLM_BASE_URL: ${SEEKER_LLM_BASE_URL:-http://host.docker.internal:11434}
@@ -26,12 +32,18 @@ services:
 
   tailscale:
     image: tailscale/tailscale:stable
-    hostname: search-engine
+    # Node name on the tailnet (MagicDNS: search-engine.<tailnet>.ts.net).
+    # `hostname:` can't be used here — Docker rejects it alongside
+    # network_mode: service:<svc> (found 2026-11-04 at first sidecar start).
     network_mode: service:engine   # shares the engine's network namespace
     environment:
       TS_USERSPACE: "false"
-      TS_OAUTH_CLIENT_ID: ${TS_OAUTH_CLIENT_ID:?set TS_OAUTH_CLIENT_ID in .env}
-      TS_OAUTH_CLIENT_SECRET: ${TS_OAUTH_CLIENT_SECRET:?set TS_OAUTH_CLIENT_SECRET in .env}
+      TS_HOSTNAME: search-engine
+      # Preauth key (reusable, non-ephemeral, tagged tag:seeker) from
+      # login.tailscale.com/admin/settings/keys. This image's containerboot
+      # only supports TS_AUTHKEY — OAuth client creds are silently ignored
+      # (no TS_OAUTH_* strings in the binary; found 2026-11-04).
+      TS_AUTHKEY: ${TS_AUTHKEY:?set TS_AUTHKEY in .env}
       TS_EXTRA_ARGS: --advertise-tags=tag:seeker
     volumes:
       - ./ts-state:/var/lib/tailscale

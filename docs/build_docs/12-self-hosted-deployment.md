@@ -3,23 +3,34 @@
 Operational companion to [`06-deployment.md`](06-deployment.md) (architecture & security
 posture). Referenced by `backup.sh` and `.env.example`.
 
-> **Status (2026-11-02):** the compose stack is built on the `phase-2-self-hosted` branch
-> and pre-flight verified end-to-end in a container (health → auth → add source → sync →
-> search; correct document ranked first through host Ollama via the docker bridge).
-> Exit criterion — the same query from a second Tailnet device — is pending: Tailscale is
-> not installed on the host and `.env` lacks the OAuth client credentials.
+> **Status (2026-11-03):** the engine container is **live on the host** — native
+> `seeker-engine.service` stopped, `gsmhub` corpus indexed through host Ollama via the
+> docker bridge (pre-flight verified end-to-end 2026-11-02: health → auth → add source →
+> sync → search). `SEEKER_EXCLUDE_DIRS` added 2026-11-03 after build artifacts
+> (`dist/*.d.ts`) were found outranking real sources in the deployed index.
+> Exit criterion — the same query from a second Tailnet device — is pending.
+> Tailscale bring-up finding (2026-11-04): the `tailscale/tailscale` image ignores
+> OAuth client credentials — its containerboot only reads `TS_AUTHKEY` (no
+> `TS_OAUTH_*` strings in the binary), and the OAuth client lacks the API scope to
+> mint keys (`POST /tailnet/-/keys` → 404 for unscoped clients). The sidecar
+> authenticates with a reusable auth key tagged `tag:seeker` in `.env` instead.
 
 ## Bring-up
 
 ```bash
-cp .env.example .env          # fill: SEEKER_API_TOKEN, SEEKER_SOURCES,
-                              # TS_OAUTH_CLIENT_ID / TS_OAUTH_CLIENT_SECRET
+cp .env.example .env          # fill: SEEKER_API_TOKEN, SEEKER_SOURCES, TS_AUTHKEY
 docker compose up -d          # engine + tailscale sidecar + restic backup
 ```
 
 - The engine publishes only `127.0.0.1:8420` on the host; Tailnet clients reach it through
   the Tailscale sidecar, which shares the engine's network namespace.
 - `SEEKER_SOURCES` is mounted read-only at `/sources/home` (standing rule 7).
+- `SEEKER_EXCLUDE_DIRS` (comma-separated) prunes directories from every source at any
+  depth — set it for code corpora, or `dist/`, `node_modules/` and friends land in the
+  index and crowd results (found 2026-11-02: a `dist/*.d.ts` outranked the real source).
+- `SEEKER_MCP_ALLOWED_HOSTS` (comma-separated, e.g. `search-engine.your-tailnet.ts.net:*`)
+  widens the MCP transport's DNS-rebinding guard beyond loopback — required before the
+  second-device MCP query (REST `/v1/search` is unaffected by the guard).
 - First run: `POST /v1/sources` with `root_path=/sources/home`, then sync.
 
 ### Prerequisite — Ollama must be reachable from the container
@@ -46,6 +57,15 @@ The native systemd `seeker-engine.service` holds `127.0.0.1:8420`. Running the c
 stack on the same host requires stopping it first (`systemctl --user stop
 seeker-engine`) or the compose port publish fails. The compose stack is the deployment
 target; the native service is the dev instance.
+
+**Reboot race (found 2026-11-04):** the native unit is `WantedBy=default.target` with
+linger enabled — it auto-starts at every boot and (`Restart=on-failure`) fights the
+compose container for the port. After a reboot the native engine can win, leaving the
+container healthy but unreachable on the published port (host curls hit the native
+instance and its separate `engine/data/seeker.db` — smoke corpus — instead of the
+deployed index). Fix applied: `systemctl --user disable --now seeker-engine.service` —
+the dev instance stays available on demand (`systemctl --user start seeker-engine`,
+then stop it again before compose work) but never races the container at boot.
 
 ## Backup & restore
 
@@ -76,7 +96,8 @@ single shared secret at personal scale.
 | Symptom | Cause / fix |
 |---|---|
 | Sync fails: connection refused to `host.docker.internal:11434` | Ollama bound to loopback only — apply the drop-in above |
-| `POST /mcp` → 421 / 400 from SDK | Host header lacks a port (SDK DNS-rebinding guard); clients should send `http://<host>:8420/mcp` |
-| Compose up fails: `TS_OAUTH_CLIENT_ID is missing` | Required `.env` guard working as intended; create an OAuth client at login.tailscale.com scoped to `tag:seeker` |
-| Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it |
+| `POST /mcp` → 421 / 400 from SDK | Host header rejected by the SDK's DNS-rebinding guard. Loopback always passes (`Host` must carry a port: `http://127.0.0.1:8420/mcp`). For a Tailscale hostname, set `SEEKER_MCP_ALLOWED_HOSTS` in `.env` (e.g. `search-engine.your-tailnet.ts.net:*`) and `docker compose up -d engine` to apply |
+| Compose up fails: `TS_AUTHKEY is missing` | Required `.env` guard working as intended; generate a reusable auth key tagged `tag:seeker` at login.tailscale.com/admin/settings/keys |
+| Sidecar crash-loops printing "To authenticate, visit" login URLs | OAuth client creds in `.env` are ignored by this image (containerboot has no `TS_OAUTH_*` support) — set `TS_AUTHKEY` |
+| Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it (`systemctl --user disable --now seeker-engine` if it came back after a reboot) |
 | `backup` logs `restic backup failed` every interval | Repository not initialized — run `docker compose run --rm backup sh -c 'restic init'` once (it loops forever by design; check `docker compose logs backup`) |

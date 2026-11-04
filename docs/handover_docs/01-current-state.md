@@ -1,18 +1,105 @@
-# Current state — 2026-10-29
+# Current state — 2026-11-03
 
-> Phase 1 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
+> Phase 2 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
 > (ADR-0001), sqlite-vec vector store, filesystem connector (+ exclude_dirs,
 > code-mime fixes), index pipeline (+ structured sync-failure reporting), REST
 > query API, MCP shim (transport fixed 2026-10-29), real backend via native
-> Ollama (ADR-0002, 2026-10-29), systemd user services, **eval set with
-> measured baseline recall@5 = 0.50 (2026-10-30)**. Next: Phase 1 exit
-> validation in Claude Desktop. See the phase board below.
+> Ollama (ADR-0002), systemd user services, eval set (baseline recall@5 =
+> 0.50, 2026-10-30), **deployment stack live on the host: engine container
+> running gsmhub (211 docs / 288 chunks), `SEEKER_EXCLUDE_DIRS` knob added
+> (2026-11-03)**. Next: Tailscale auth key (`TS_AUTHKEY`) in `.env` → sidecar up →
+> second-device query (the phase-2 exit criterion). See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
 
 ## What is being worked on right now
+
+**2026-11-04 — MCP field test passed (on-host); reboot race between native unit and container found and fixed.**
+
+- **Full eval through the deployed MCP path (2026-11-04): all 20 queries via
+  `tools/call search_documents` — recall@5 = 10/20 = 0.50, exactly the
+  baseline.** Deployment passes the eval gate (no regression shipped). Miss
+  pattern update: `docs/handover_docs/admin-operations.md` now crowds top-1
+  on several misses — the successor to the documented `seed-prices.ts`
+  crowding; both are topically sprawling files. Tuning stays post-exit
+  (OD 1 query rewrite, OD 2 reranker), gated by this eval.
+- **Field test (real MCP client, full protocol over HTTP):** initialize →
+  session id → initialized notification → `tools/call search_documents` with
+  bearer auth — against the deployed container. Container logs confirm the
+  `POST /mcp` hits. Results vs eval ground truth: device-name query →
+  **target #1** (`device-name.util.ts`, 0.691); cache-down query → target at
+  **#3** (`redis.config.ts`, 0.536); price-arrow query → miss in top-3 —
+  consistent with the measured baseline recall@5 = 0.50 (misses are OD 1/2
+  tuning, not deployment bugs). The MCP path (auth, session, tool dispatch,
+  correct corpus) works end-to-end on the deployment.
+- **Reboot race fixed:** the machine rebooted 2026-11-04 morning; the native
+  `seeker-engine.service` (linger + `WantedBy=default.target` +
+  `Restart=on-failure`) auto-started and won the race for `127.0.0.1:8420`,
+  leaving the container healthy but its publish dead — curls silently hit the
+  native instance and its separate `engine/data/seeker.db` (3 smoke docs).
+  Symptom to remember: engine answers with the **smoke corpus** (`/tmp/
+  seeker-smoke-src` paths) instead of gsmhub → the native engine owns the
+  port. Fix applied: `systemctl --user disable --now seeker-engine.service`
+  (dev instance still startable on demand) + `docker compose up -d
+  --force-recreate engine` to rebind the publish (plain `up -d` is a no-op
+  while compose considers the container "Running"). Documented in runbook 12.
+- **Field-test incident note:** the session's seeker MCP connection died in
+  the reboot; the test was run as a raw MCP client over HTTP (curl), which
+  exercises the identical transport path the extension uses.
+
+**2026-11-03 — engine container live on the host; `SEEKER_EXCLUDE_DIRS` added after dist noise found in the deployed index.**
+
+- **Deployment state:** native `seeker-engine.service` stopped (port 8420 freed);
+  the compose engine container serves the gsmhub corpus. The tailscale sidecar
+  is **not running** — compose's `:?` interpolation guards run at parse time
+  for all services, so an engine-only bring-up needs placeholder vars:
+  `TS_AUTHKEY=dummy docker compose up -d
+  --build engine` (worked around; `docker exec seeker-engine-1 …` for one-off
+  commands — `docker compose exec` also trips the guards). Real creds go in
+  `.env`, then plain `docker compose up -d` adds the sidecar without touching
+  the running engine.
+- **gsmhub indexed in the container** (through host Ollama via the docker
+  bridge, `nomic-embed-text`): first full sync 407 indexed / 133 unsupported /
+  2 failed (embedding `ReadTimeout`); retry +30 indexed / 377 unchanged. After
+  the excludes landed: **211 documents / 288 chunks, 196 pruned, 31
+  unsupported, 1 failed** — `frontend/src/components/admin/DeviceForm.tsx`
+  (48.6 KB → many chunks; one embed batch exceeds the timeout on CPU Ollama).
+  It retries on every full sync until it succeeds; 1 file of 212, not a
+  blocker.
+- **`SEEKER_EXCLUDE_DIRS` added (code change, phase-2 branch):** the eval's
+  excludes (`node_modules`, `dist`, `playwright-report`, `test-results`) were
+  hardcoded only in `eval/run_eval.py` — a deployed engine had no way to
+  exclude build output, and the first container index held 407 docs including
+  `backend/dist/*.d.ts` **outranking the real source** for the eval query
+  (rank 43 while the `.ts` wasn't in the top 50). Fix: comma-separated
+  `SEEKER_EXCLUDE_DIRS` in `config.py`, carried on `Engine` and applied at
+  both connector construction sites (`service.py`), passed from
+  `create_app`; compose + `.env.example` + the runbook document it. Suite
+  **157 tests green, ruff clean** (3 new config tests + an end-to-end wiring
+  test `TestExcludeDirsConfig`).
+- **Smoke query on the cleaned index** (eval query 1): compare components
+  rank 9/14 (`CompareBox.tsx`, `ComparisonTable.tsx`); the eval target
+  `backend/src/modules/compare/compare.service.ts` still isn't top-50 —
+  consistent with the measured baseline recall@5 = 0.50 (this is a miss-type
+  query; `seed-prices.ts` crowding top-5 is the documented pattern).
+  Deployment-side artifacts are fixed; retrieval-quality misses are post-exit
+  tuning (OD 1 query rewrite, OD 2 reranker), gated by the eval set.
+- **`SEEKER_MCP_ALLOWED_HOSTS` added (code change, same round):** the MCP
+  SDK's DNS-rebinding guard auto-enables only for loopback hosts, so the
+  second-device MCP query would have been rejected 421 (REST is unaffected).
+  The knob passes explicit `TransportSecuritySettings` — loopback entries
+  preserved + the configured patterns (exact `host:port` or port-wildcard
+  `host:*`; the SDK has no suffix wildcards); unset keeps the SDK default.
+  Wiring test proves 421 without / 200 with the config. Suite now
+  **161 tests green, ruff clean** (2026-11-03).
+- **Remaining for Phase 2 exit:** reusable auth key tagged `tag:seeker` from
+  login.tailscale.com/admin/settings/keys → `TS_AUTHKEY` in `.env` →
+  `docker compose up -d` (sidecar joins; the image ignores OAuth client creds —
+  containerboot has no `TS_OAUTH_*` support, found 2026-11-04) → set
+  `SEEKER_MCP_ALLOWED_HOSTS` to the Tailnet hostname + restart engine →
+  install Tailscale on a second device → same query from it.
 
 **2026-10-30 — eval set built on the user's corpus; baseline recall@5 = 0.50 (measured).**
 
@@ -220,7 +307,7 @@ enters only at Phase 2.
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
 | 1 — Core engine + MCP server | done | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30. Bearer token on the MCP mount + loopback-only serving verified live 2026-10-30; 153/153 tests | Done — user moved to Phase 2 on 2026-10-30. **Process deviation:** the final phase-1 work landed on `master` instead of `phase_1_core_engine` (branch-per-phase was never written into build docs `11`; rule added there 2026-10-30). Reconciled 2026-11-02: `phase_1_core_engine` now points at `master`; its 14 branch-only commits were verified superseded (incl. `test_auth.py`/`test_e2e_api.py`, which targeted the removed `seeker.api.auth` module — nothing salvageable) |
-| 2 — Self-hosted deployment | in progress | Stack built on `phase-2-self-hosted` (rebased onto master 2026-11-02; dup `./data:/data` volume fixed; `SEEKER_LLM_BASE_URL` wired). **Pre-flight verified 2026-11-02 end-to-end in a container** (health → auth 401 → add source → sync 2 docs through host Ollama via docker bridge → search: correct doc first at 0.893). Ollama rebound to `0.0.0.0` via systemd drop-in so the bridge gateway can reach it (exposure trade-off documented). Runbook: build docs `12`. Remaining for exit: install Tailscale + OAuth creds in `.env`, stop native engine (port 8420), `docker compose up -d`, second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
+| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** — full eval through the deployed MCP path: recall@5 = 0.50, exactly baseline; protocol+auth verified over HTTP. Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: `TS_AUTHKEY` in `.env` (auth key; image ignores OAuth creds — 2026-11-04) → sidecar up → second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
 | 5 — Office add-in | not started | — | Office.js task pane |

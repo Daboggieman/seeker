@@ -19,6 +19,13 @@ Env vars (all optional; defaults make the engine runnable with zero setup):
     SEEKER_API_TOKEN           bearer shared secret; the default exists only
                                so the engine runs with zero setup locally —
                                set a real token before Phase 2 exposure.
+    SEEKER_EXCLUDE_DIRS        comma-separated directory names pruned from
+                               every filesystem source at any depth (e.g.
+                               "node_modules,dist"); default: none excluded
+    SEEKER_MCP_ALLOWED_HOSTS   comma-separated Host patterns the MCP transport
+                               accepts besides loopback — exact ("host:8420")
+                               or port-wildcard ("host:*", the SDK has no
+                               suffix wildcards); default: loopback only
 """
 
 from __future__ import annotations
@@ -45,6 +52,14 @@ class EngineSettings:
     llm_base_url: str = ""  # falls back to embedding_base_url when empty
     llm_api_key: str = "not-required"
 
+    # Directory names pruned from every filesystem source at any depth.
+    exclude_dirs: frozenset[str] = frozenset()
+
+    # Extra Host header values the MCP transport accepts (DNS-rebinding
+    # guard): exact "host:port" or port-wildcard "host:*". Loopback is
+    # always allowed by the SDK; these widen it (e.g. a Tailscale hostname).
+    mcp_allowed_hosts: tuple[str, ...] = ()
+
 
 def load_settings(env: dict[str, str] | None = None) -> EngineSettings:
     """Build settings from `env` (default: os.environ), SEEKER_-prefixed."""
@@ -68,5 +83,11 @@ def load_settings(env: dict[str, str] | None = None) -> EngineSettings:
         llm_model=get("LLM_MODEL", "mock-llm"),
         llm_base_url=get("LLM_BASE_URL", ""),
         llm_api_key=get("LLM_API_KEY", "not-required"),
+        exclude_dirs=frozenset(
+            part.strip() for part in get("EXCLUDE_DIRS", "").split(",") if part.strip()
+        ),
+        mcp_allowed_hosts=tuple(
+            part.strip() for part in get("MCP_ALLOWED_HOSTS", "").split(",") if part.strip()
+        ),
         api_token=get("API_TOKEN", _DEFAULT_API_TOKEN),
     )

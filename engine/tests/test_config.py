@@ -49,6 +49,27 @@ class TestEnvOverride:
         s = load_settings({"SEEKER_EMBEDDING_DIMENSIONS": "1536"})
         assert s.embedding_dimensions == 1536
 
+    def test_exclude_dirs_defaults_empty(self) -> None:
+        s = load_settings({})
+        assert s.exclude_dirs == frozenset()
+
+    def test_exclude_dirs_comma_separated(self) -> None:
+        s = load_settings({"SEEKER_EXCLUDE_DIRS": "node_modules, dist ,test-results"})
+        assert s.exclude_dirs == frozenset({"node_modules", "dist", "test-results"})
+
+    def test_exclude_dirs_ignores_blanks(self) -> None:
+        # Trailing comma / double commas must not yield empty-string entries
+        s = load_settings({"SEEKER_EXCLUDE_DIRS": "dist,,dist,"})
+        assert s.exclude_dirs == frozenset({"dist"})
+
+    def test_mcp_allowed_hosts_defaults_empty(self) -> None:
+        s = load_settings({})
+        assert s.mcp_allowed_hosts == ()
+
+    def test_mcp_allowed_hosts_comma_separated(self) -> None:
+        s = load_settings({"SEEKER_MCP_ALLOWED_HOSTS": "search-engine.ts.net:* ,host:8420"})
+        assert s.mcp_allowed_hosts == ("search-engine.ts.net:*", "host:8420")
+
 
 class TestSettingsImmutable:
     def test_engine_settings_is_frozen(self) -> None:
