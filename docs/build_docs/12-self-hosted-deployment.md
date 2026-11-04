@@ -1,0 +1,82 @@
+# Seeker — Self-Hosted Deployment Runbook
+
+Operational companion to [`06-deployment.md`](06-deployment.md) (architecture & security
+posture). Referenced by `backup.sh` and `.env.example`.
+
+> **Status (2026-11-02):** the compose stack is built on the `phase-2-self-hosted` branch
+> and pre-flight verified end-to-end in a container (health → auth → add source → sync →
+> search; correct document ranked first through host Ollama via the docker bridge).
+> Exit criterion — the same query from a second Tailnet device — is pending: Tailscale is
+> not installed on the host and `.env` lacks the OAuth client credentials.
+
+## Bring-up
+
+```bash
+cp .env.example .env          # fill: SEEKER_API_TOKEN, SEEKER_SOURCES,
+                              # TS_OAUTH_CLIENT_ID / TS_OAUTH_CLIENT_SECRET
+docker compose up -d          # engine + tailscale sidecar + restic backup
+```
+
+- The engine publishes only `127.0.0.1:8420` on the host; Tailnet clients reach it through
+  the Tailscale sidecar, which shares the engine's network namespace.
+- `SEEKER_SOURCES` is mounted read-only at `/sources/home` (standing rule 7).
+- First run: `POST /v1/sources` with `root_path=/sources/home`, then sync.
+
+### Prerequisite — Ollama must be reachable from the container
+
+The engine reaches host Ollama at `host.docker.internal:11434` (`extra_hosts` maps it to
+the docker bridge gateway). **Ollama's default bind is `127.0.0.1`-only, which the bridge
+gateway cannot reach.** Fix applied 2026-11-02 as a systemd user drop-in
+(`~/.config/systemd/user/ollama.service.d/override.conf`):
+
+```ini
+[Service]
+Environment=OLLAMA_HOST=0.0.0.0
+```
+
+then `systemctl --user daemon-reload && systemctl --user restart ollama`. Loopback clients
+(the native engine, CLI use) are unaffected. **Trade-off:** Ollama serves without
+authentication, so this exposes it on every host interface — LAN-visible behind NAT.
+Revert by deleting the drop-in and restarting the unit. (A tighter option — binding only
+the docker bridge IP — breaks when docker0's address changes; not recommended.)
+
+### Port conflict with the native dev engine
+
+The native systemd `seeker-engine.service` holds `127.0.0.1:8420`. Running the compose
+stack on the same host requires stopping it first (`systemctl --user stop
+seeker-engine`) or the compose port publish fails. The compose stack is the deployment
+target; the native service is the dev instance.
+
+## Backup & restore
+
+The `backup` service runs `restic backup /data` on a loop (`BACKUP_INTERVAL_SECONDS`,
+default 24h), keeping 7 daily / 4 weekly / 6 monthly snapshots, then prunes. Configure in
+`.env`: `RESTIC_REPOSITORY` + `RESTIC_PASSWORD` plus the backend's credentials (B2 or S3
+examples in `.env.example`).
+
+```bash
+# Restore the latest snapshot (from any machine with the repo credentials):
+docker compose run --rm backup sh -c \
+  'restic restore latest --target /tmp-restore && ls /tmp-restore/data'
+# Then stop the engine, replace ./data/seeker.db (and -wal/-shm if present), restart.
+```
+
+Backups mount `./data` read-only — the backup container can never corrupt the index.
+Test a restore after first configuring the repository; an untested backup is not a backup.
+
+## Token rotation
+
+Rotate `SEEKER_API_TOKEN` in `.env` (rotate if a device is lost — docs 06), then
+`docker compose up -d engine` to recreate the container. Update every client's bearer
+token (Claude Code MCP registration, mobile, extension) in the same breath — there is a
+single shared secret at personal scale.
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| Sync fails: connection refused to `host.docker.internal:11434` | Ollama bound to loopback only — apply the drop-in above |
+| `POST /mcp` → 421 / 400 from SDK | Host header lacks a port (SDK DNS-rebinding guard); clients should send `http://<host>:8420/mcp` |
+| Compose up fails: `TS_OAUTH_CLIENT_ID is missing` | Required `.env` guard working as intended; create an OAuth client at login.tailscale.com scoped to `tag:seeker` |
+| Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it |
+| `backup` logs `restic backup failed` every interval | Repository not initialized — run `docker compose run --rm backup sh -c 'restic init'` once (it loops forever by design; check `docker compose logs backup`) |
