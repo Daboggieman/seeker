@@ -55,6 +55,15 @@ stack on the same host requires stopping it first (`systemctl --user stop
 seeker-engine`) or the compose port publish fails. The compose stack is the deployment
 target; the native service is the dev instance.
 
+**Reboot race (found 2026-11-04):** the native unit is `WantedBy=default.target` with
+linger enabled — it auto-starts at every boot and (`Restart=on-failure`) fights the
+compose container for the port. After a reboot the native engine can win, leaving the
+container healthy but unreachable on the published port (host curls hit the native
+instance and its separate `engine/data/seeker.db` — smoke corpus — instead of the
+deployed index). Fix applied: `systemctl --user disable --now seeker-engine.service` —
+the dev instance stays available on demand (`systemctl --user start seeker-engine`,
+then stop it again before compose work) but never races the container at boot.
+
 ## Backup & restore
 
 The `backup` service runs `restic backup /data` on a loop (`BACKUP_INTERVAL_SECONDS`,
@@ -86,5 +95,5 @@ single shared secret at personal scale.
 | Sync fails: connection refused to `host.docker.internal:11434` | Ollama bound to loopback only — apply the drop-in above |
 | `POST /mcp` → 421 / 400 from SDK | Host header rejected by the SDK's DNS-rebinding guard. Loopback always passes (`Host` must carry a port: `http://127.0.0.1:8420/mcp`). For a Tailscale hostname, set `SEEKER_MCP_ALLOWED_HOSTS` in `.env` (e.g. `search-engine.your-tailnet.ts.net:*`) and `docker compose up -d engine` to apply |
 | Compose up fails: `TS_OAUTH_CLIENT_ID is missing` | Required `.env` guard working as intended; create an OAuth client at login.tailscale.com scoped to `tag:seeker` |
-| Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it |
+| Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it (`systemctl --user disable --now seeker-engine` if it came back after a reboot) |
 | `backup` logs `restic backup failed` every interval | Repository not initialized — run `docker compose run --rm backup sh -c 'restic init'` once (it loops forever by design; check `docker compose logs backup`) |

@@ -16,6 +16,32 @@ re-measure.
 
 ## What is being worked on right now
 
+**2026-11-04 — MCP field test passed (on-host); reboot race between native unit and container found and fixed.**
+
+- **Field test (real MCP client, full protocol over HTTP):** initialize →
+  session id → initialized notification → `tools/call search_documents` with
+  bearer auth — against the deployed container. Container logs confirm the
+  `POST /mcp` hits. Results vs eval ground truth: device-name query →
+  **target #1** (`device-name.util.ts`, 0.691); cache-down query → target at
+  **#3** (`redis.config.ts`, 0.536); price-arrow query → miss in top-3 —
+  consistent with the measured baseline recall@5 = 0.50 (misses are OD 1/2
+  tuning, not deployment bugs). The MCP path (auth, session, tool dispatch,
+  correct corpus) works end-to-end on the deployment.
+- **Reboot race fixed:** the machine rebooted 2026-11-04 morning; the native
+  `seeker-engine.service` (linger + `WantedBy=default.target` +
+  `Restart=on-failure`) auto-started and won the race for `127.0.0.1:8420`,
+  leaving the container healthy but its publish dead — curls silently hit the
+  native instance and its separate `engine/data/seeker.db` (3 smoke docs).
+  Symptom to remember: engine answers with the **smoke corpus** (`/tmp/
+  seeker-smoke-src` paths) instead of gsmhub → the native engine owns the
+  port. Fix applied: `systemctl --user disable --now seeker-engine.service`
+  (dev instance still startable on demand) + `docker compose up -d
+  --force-recreate engine` to rebind the publish (plain `up -d` is a no-op
+  while compose considers the container "Running"). Documented in runbook 12.
+- **Field-test incident note:** the session's seeker MCP connection died in
+  the reboot; the test was run as a raw MCP client over HTTP (curl), which
+  exercises the identical transport path the extension uses.
+
 **2026-11-03 — engine container live on the host; `SEEKER_EXCLUDE_DIRS` added after dist noise found in the deployed index.**
 
 - **Deployment state:** native `seeker-engine.service` stopped (port 8420 freed);
@@ -274,7 +300,7 @@ enters only at Phase 2.
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
 | 1 — Core engine + MCP server | done | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30. Bearer token on the MCP mount + loopback-only serving verified live 2026-10-30; 153/153 tests | Done — user moved to Phase 2 on 2026-10-30. **Process deviation:** the final phase-1 work landed on `master` instead of `phase_1_core_engine` (branch-per-phase was never written into build docs `11`; rule added there 2026-10-30). Reconciled 2026-11-02: `phase_1_core_engine` now points at `master`; its 14 branch-only commits were verified superseded (incl. `test_auth.py`/`test_e2e_api.py`, which targeted the removed `seeker.api.auth` module — nothing salvageable) |
-| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added — a `dist/*.d.ts` had outranked the real source). Pre-flight verified 2026-11-02 end-to-end (health → auth → add source → sync → search through host Ollama via docker bridge, correct doc first at 0.893). Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 157 tests green, ruff clean (2026-11-03). Remaining for exit: OAuth creds in `.env` → sidecar up → second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
+| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** (full protocol over HTTP; target #1/#3 on 2 of 3 eval queries, 1 miss = known baseline). Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: OAuth creds in `.env` → sidecar up → second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
 | 5 — Office add-in | not started | — | Office.js task pane |
