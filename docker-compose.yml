@@ -39,8 +39,11 @@ services:
     environment:
       TS_USERSPACE: "false"
       TS_HOSTNAME: search-engine
-      TS_OAUTH_CLIENT_ID: ${TS_OAUTH_CLIENT_ID:?set TS_OAUTH_CLIENT_ID in .env}
-      TS_OAUTH_CLIENT_SECRET: ${TS_OAUTH_CLIENT_SECRET:?set TS_OAUTH_CLIENT_SECRET in .env}
+      # Preauth key (reusable, non-ephemeral, tagged tag:seeker) from
+      # login.tailscale.com/admin/settings/keys. This image's containerboot
+      # only supports TS_AUTHKEY — OAuth client creds are silently ignored
+      # (no TS_OAUTH_* strings in the binary; found 2026-11-04).
+      TS_AUTHKEY: ${TS_AUTHKEY:?set TS_AUTHKEY in .env}
       TS_EXTRA_ARGS: --advertise-tags=tag:seeker
     volumes:
       - ./ts-state:/var/lib/tailscale

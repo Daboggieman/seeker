@@ -8,7 +8,8 @@ Source of record: spec §8 (Deployment), §10 (Security & Privacy).
 > prunes build-output dirs from every source — set it for code corpora. Operational
 > runbook: [`12-self-hosted-deployment.md`](12-self-hosted-deployment.md) — incl. the
 > Ollama-bind fix and the native-engine port conflict. Pending for exit: Tailscale
-> install + OAuth credentials in `.env`, then the second-device query. Until the stack
+> auth key in `.env` (the image ignores OAuth client creds — 2026-11-04), then the
+> second-device query. Until the stack
 > was deployed, the engine ran natively as systemd **user** services
 > (`ollama.service` still does; `seeker-engine.service` on `:8420` is stopped while the
 > container holds the port, config in `~/.config/seeker/engine.env`) — see handover `01`.

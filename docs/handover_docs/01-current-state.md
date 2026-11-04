@@ -8,7 +8,7 @@
 > Ollama (ADR-0002), systemd user services, eval set (baseline recall@5 =
 > 0.50, 2026-10-30), **deployment stack live on the host: engine container
 > running gsmhub (211 docs / 288 chunks), `SEEKER_EXCLUDE_DIRS` knob added
-> (2026-11-03)**. Next: Tailscale OAuth creds in `.env` → sidecar up →
+> (2026-11-03)**. Next: Tailscale auth key (`TS_AUTHKEY`) in `.env` → sidecar up →
 > second-device query (the phase-2 exit criterion). See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
@@ -55,7 +55,7 @@ re-measure.
   the compose engine container serves the gsmhub corpus. The tailscale sidecar
   is **not running** — compose's `:?` interpolation guards run at parse time
   for all services, so an engine-only bring-up needs placeholder vars:
-  `TS_OAUTH_CLIENT_ID=dummy TS_OAUTH_CLIENT_SECRET=dummy docker compose up -d
+  `TS_AUTHKEY=dummy docker compose up -d
   --build engine` (worked around; `docker exec seeker-engine-1 …` for one-off
   commands — `docker compose exec` also trips the guards). Real creds go in
   `.env`, then plain `docker compose up -d` adds the sidecar without touching
@@ -94,10 +94,10 @@ re-measure.
   `host:*`; the SDK has no suffix wildcards); unset keeps the SDK default.
   Wiring test proves 421 without / 200 with the config. Suite now
   **161 tests green, ruff clean** (2026-11-03).
-- **Remaining for Phase 2 exit:** OAuth client at
-  login.tailscale.com/admin/settings/oauth (Devices: Core, Read+Write) →
-  `TS_OAUTH_CLIENT_ID`/`TS_OAUTH_CLIENT_SECRET` in `.env` → `docker compose
-  up -d` (sidecar joins, node tagged `tag:seeker`) → set
+- **Remaining for Phase 2 exit:** reusable auth key tagged `tag:seeker` from
+  login.tailscale.com/admin/settings/keys → `TS_AUTHKEY` in `.env` →
+  `docker compose up -d` (sidecar joins; the image ignores OAuth client creds —
+  containerboot has no `TS_OAUTH_*` support, found 2026-11-04) → set
   `SEEKER_MCP_ALLOWED_HOSTS` to the Tailnet hostname + restart engine →
   install Tailscale on a second device → same query from it.
 
@@ -307,7 +307,7 @@ enters only at Phase 2.
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
 | 1 — Core engine + MCP server | done | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30. Bearer token on the MCP mount + loopback-only serving verified live 2026-10-30; 153/153 tests | Done — user moved to Phase 2 on 2026-10-30. **Process deviation:** the final phase-1 work landed on `master` instead of `phase_1_core_engine` (branch-per-phase was never written into build docs `11`; rule added there 2026-10-30). Reconciled 2026-11-02: `phase_1_core_engine` now points at `master`; its 14 branch-only commits were verified superseded (incl. `test_auth.py`/`test_e2e_api.py`, which targeted the removed `seeker.api.auth` module — nothing salvageable) |
-| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** — full eval through the deployed MCP path: recall@5 = 0.50, exactly baseline; protocol+auth verified over HTTP. Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: OAuth creds in `.env` → sidecar up → second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
+| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** — full eval through the deployed MCP path: recall@5 = 0.50, exactly baseline; protocol+auth verified over HTTP. Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: `TS_AUTHKEY` in `.env` (auth key; image ignores OAuth creds — 2026-11-04) → sidecar up → second-device query | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
 | 3 — Mobile client | not started | — | Expo, direct REST over Tailnet |
 | 4 — Browser extension | not started | — | Manifest V3 |
 | 5 — Office add-in | not started | — | Office.js task pane |
