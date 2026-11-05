@@ -38,6 +38,10 @@ services:
     network_mode: service:engine   # shares the engine's network namespace
     environment:
       TS_USERSPACE: "false"
+      # Persist node identity — without this containerboot runs tailscaled with
+      # `--state=mem:` (found 2026-11-05): every start re-registers a new node,
+      # re-consuming the auth key and orphaning the previous one in the console.
+      TS_STATE_DIR: /var/lib/tailscale
       TS_HOSTNAME: search-engine
       # Preauth key (reusable, non-ephemeral, tagged tag:seeker) from
       # login.tailscale.com/admin/settings/keys. This image's containerboot
