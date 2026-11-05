@@ -14,6 +14,11 @@ posture). Referenced by `backup.sh` and `.env.example`.
 > `TS_OAUTH_*` strings in the binary), and the OAuth client lacks the API scope to
 > mint keys (`POST /tailnet/-/keys` → 404 for unscoped clients). The sidecar
 > authenticates with a reusable auth key tagged `tag:seeker` in `.env` instead.
+> **Sidecar joined the tailnet 2026-11-05** (node `search-engine-2`, tagged
+> `tag:seeker`, node state persisted via `TS_STATE_DIR`); MCP initialize (200) and
+> REST `/v1/search` (200) verified through the tailnet IP with the MagicDNS Host
+> header, wrong-Host still 421. Remaining for exit: delete the two stale tailnet
+> nodes in the admin console → the same query from a second Tailnet device.
 
 ## Bring-up
 
@@ -99,5 +104,7 @@ single shared secret at personal scale.
 | `POST /mcp` → 421 / 400 from SDK | Host header rejected by the SDK's DNS-rebinding guard. Loopback always passes (`Host` must carry a port: `http://127.0.0.1:8420/mcp`). For a Tailscale hostname, set `SEEKER_MCP_ALLOWED_HOSTS` in `.env` (e.g. `search-engine.your-tailnet.ts.net:*`) and `docker compose up -d engine` to apply |
 | Compose up fails: `TS_AUTHKEY is missing` | Required `.env` guard working as intended; generate a reusable auth key tagged `tag:seeker` at login.tailscale.com/admin/settings/keys |
 | Sidecar crash-loops printing "To authenticate, visit" login URLs | OAuth client creds in `.env` are ignored by this image (containerboot has no `TS_OAUTH_*` support) — set `TS_AUTHKEY` |
+| Sidecar registers a NEW node on every restart, consuming the auth key | containerboot runs tailscaled with `--state=mem:` unless `TS_STATE_DIR` is set (found 2026-11-05) — the compose file sets it to `/var/lib/tailscale` (the mounted volume) |
+| Recreating the engine left the sidecar dead (`network namespace ... not running`) | The sidecar lives in the engine's netns — recreating the engine orphans it. Always `docker compose up -d` (all services), never `up -d engine` alone (found 2026-11-05) |
 | Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it (`systemctl --user disable --now seeker-engine` if it came back after a reboot) |
 | `backup` logs `restic backup failed` every interval | Repository not initialized — run `docker compose run --rm backup sh -c 'restic init'` once (it loops forever by design; check `docker compose logs backup`) |
