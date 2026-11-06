@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/react": "~19.3.0",
+    "eas-cli": "^27.5.0",
     "typescript": "~6.0.3"
   },
   "scripts": {
