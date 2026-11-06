@@ -1,10 +1,10 @@
 {
   "cli": {
-    "promptToConfigurePushNotifications": false
+    "promptToConfigurePushNotifications": false,
+    "appVersionSource": "local"
   },
   "build": {
     "preview": {
-      "description": "Directly installable APK for the device test (docs/build_docs/13)",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
