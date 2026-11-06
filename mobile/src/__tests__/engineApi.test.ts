@@ -3,7 +3,7 @@
 import {EngineError, health, listSources, search} from '../engineApi';
 
 const fetchMock = jest.fn();
-(global as {fetch: unknown}).fetch = fetchMock;
+globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 function okJson(body: unknown) {
   return {
