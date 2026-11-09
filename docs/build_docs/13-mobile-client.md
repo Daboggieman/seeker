@@ -6,8 +6,12 @@ Operational companion to [`07-client-adapters.md`](07-client-adapters.md) (Phase
 > **Status (2026-11-05):** scaffold + plumbing + UI complete — Expo SDK 58 / RN 0.88 /
 > TypeScript strict in `mobile/`; typed engine API client ([`engineApi.ts`]), keychain
 > settings (expo-secure-store), search screen (bar → chips → results) + settings modal.
-> 6/6 unit tests, tsc clean, Metro bundle verified. **Pending: the device test (exit
-> criterion).**
+> 6/6 unit tests, tsc clean, Metro bundle verified.
+>
+> **2026-11-06: installable APK built via EAS** — profile `preview`, package
+> `com.daboggieman.seeker`, version 1.0.0 (code 1), keystore held in EAS cloud
+> (Build Credentials `5V9KI99OkL`). Verified: manifest + `assets/index.android.bundle`
+> (Hermes) + `lib/arm64-v8a/*`. **Pending: the device test (exit criterion).**
 
 ## What it is
 
@@ -22,6 +26,31 @@ Thin shell over the REST API (standing rule 2 — the engine never knows the cli
 
 Engine URL + token live in the device keychain (expo-secure-store) — the token is never
 bundled into the app source. Rotate it (docs 06 / OD 8) and re-enter it in Settings.
+
+## Install the APK (EAS build)
+
+Built 2026-11-06, both builds finished (fingerprint `794b5dd4…`):
+- https://expo.dev/accounts/daboggieman/projects/seeker/builds/27ca1a24-d48a-4e6a-b880-35472ecb75a1
+- https://expo.dev/accounts/daboggieman/projects/seeker/builds/1f812021-6f6d-431f-96dc-6afb61272b32
+
+(Identical artifacts; APK also in the host's `~/Downloads/` as
+`application-27ca1a24-…apk`, 66.9 MB.) Rebuild after code changes:
+
+```bash
+cd /home/recoding/seeker/mobile
+node --dns-result-order=ipv4first node_modules/eas-cli/bin/run \
+  build -p android --profile preview --non-interactive --no-wait
+```
+
+**Always invoke eas via `node --dns-result-order=ipv4first` on this host** (not `npx
+eas-cli`): the host's IPv6 is dead while api.expo.dev has AAAA records, and eas-cli's
+node-fetch intermittently dials v6 first → `request to … failed, reason:` errors.
+Retries eventually succeed, but the flag makes calls reliable. A run is **submitted**
+when it prints `See logs: https://expo.dev/accounts/daboggieman/projects/seeker/builds/<id>`.
+Watch: `node --dns-result-order=ipv4first node_modules/eas-cli/bin/run build:list`.
+
+On the phone: open the build page → **Install** → allow "install unknown apps" for the
+browser → open **Seeker**, then the first-run Settings flow below.
 
 ## Run it
 
@@ -53,6 +82,7 @@ Tailnet device — docs 12).
 
 - Results are view-only: long-press shares the file path; opening indexed files on the
   phone is future scope.
-- No dev-build/eas yet — Expo Go only (sufficient for the exit criterion).
+- APK has no auto-update — rebuild + reinstall after changes (Expo Go remains the fast
+  dev loop via `npx expo start --tunnel`).
 - `SEEKER_API_TOKEN` is still `dev-insecure-token` on the deployment — rotate before
   daily use from the phone.
