@@ -44,10 +44,17 @@ node --dns-result-order=ipv4first node_modules/eas-cli/bin/run \
 
 **Always invoke eas via `node --dns-result-order=ipv4first` on this host** (not `npx
 eas-cli`): the host's IPv6 is dead while api.expo.dev has AAAA records, and eas-cli's
-node-fetch intermittently dials v6 first → `request to … failed, reason:` errors.
-Retries eventually succeed, but the flag makes calls reliable. A run is **submitted**
-when it prints `See logs: https://expo.dev/accounts/daboggieman/projects/seeker/builds/<id>`.
-Watch: `node --dns-result-order=ipv4first node_modules/eas-cli/bin/run build:list`.
+node-fetch intermittently dials v6 first → `request to … failed, reason:` errors on
+small calls. Separately, the host's uplink stalls on large requests (~100 KB+ bodies
+ETIMEDOUT ~25-50% of the time, any HTTP stack), so **wrap every eas call in a retry
+loop** — a run is **submitted** when it prints
+`See logs: https://expo.dev/accounts/daboggieman/projects/seeker/builds/<id>`
+(grep for `See logs`, not "queued"). Failed retries after the archive upload are
+wasted ~10 s re-uploads, not queued builds. Watch progress:
+
+```bash
+node --dns-result-order=ipv4first node_modules/eas-cli/bin/run build:list
+```
 
 On the phone: open the build page → **Install** → allow "install unknown apps" for the
 browser → open **Seeker**, then the first-run Settings flow below.
