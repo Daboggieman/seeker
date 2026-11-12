@@ -1,4 +1,4 @@
-# Current state — 2026-11-03
+# Current state — 2026-11-12
 
 > Phase 2 in progress. Built so far: chunker (+ overlap fix, 2026-10-26), mock
 > embedding backend, universal OpenAI-compatible backends, config + factories
@@ -9,9 +9,15 @@
 > 0.50, 2026-10-30), **deployment stack live on the host: engine container
 > running gsmhub (211 docs / 288 chunks), `SEEKER_EXCLUDE_DIRS` knob added
 > (2026-11-03)**. Sidecar joined the tailnet 2026-11-05 (node `search-engine-2`,
-> tagged `tag:seeker`); MCP + REST verified over the tailnet path. Next: delete the
-> stale tailnet nodes in the console → second-device query (the phase-2 exit
-> criterion). See the phase board below.
+> tagged `tag:seeker`); MCP + REST verified over the tailnet path.
+> **2026-11-12: phase-2 AND phase-3 exit criteria MET** — second-device search proven
+> live (engine log `POST /v1/search HTTP/1.1" 200` from the Waydroid tailnet node
+> `waydroid-x86-64-device` / 100.101.53.85, three fresh queries) and the mobile field
+> test passed on Waydroid (Android 13): https engine endpoint via `tailscale serve`,
+> keychain persistence verified across a cold restart. Root cause of every earlier
+> on-device failure: Android 13 blocks cleartext `http://` (docs build 13). Stale
+> tailnet node cleanup (`search-engine`, `search-engine-1`) stays open as console
+> housekeeping, non-blocking. Next: phase 4 — browser extension. See the phase board below.
 
 The status board. Everything here is dated; if a claim is older than the work, distrust it and
 re-measure.
@@ -309,9 +315,9 @@ enters only at Phase 2.
 | Phase | Status | Verified | Notes |
 |---|---|---|---|
 | 1 — Core engine + MCP server | done | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30. Bearer token on the MCP mount + loopback-only serving verified live 2026-10-30; 153/153 tests | Done — user moved to Phase 2 on 2026-10-30. **Process deviation:** the final phase-1 work landed on `master` instead of `phase_1_core_engine` (branch-per-phase was never written into build docs `11`; rule added there 2026-10-30). Reconciled 2026-11-02: `phase_1_core_engine` now points at `master`; its 14 branch-only commits were verified superseded (incl. `test_auth.py`/`test_e2e_api.py`, which targeted the removed `seeker.api.auth` module — nothing salvageable) |
-| 2 — Self-hosted deployment | in progress | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** — full eval through the deployed MCP path: recall@5 = 0.50, exactly baseline; protocol+auth verified over HTTP. Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: delete stale tailnet nodes (`search-engine`, `search-engine-1`) in the console → second-device query (sidecar joined 2026-11-05 as `search-engine-2`, tagged; MCP + REST verified over the tailnet path) | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06 |
-| 3 — Mobile client | in progress | Expo SDK 58 scaffold (TS strict) in `mobile/` on `phase-3-mobile-client`: typed engine API client (bearer + `X-Request-Id` + engine error shape), keychain settings (expo-secure-store, token never bundled), search screen + settings modal; 6/6 unit tests, tsc clean, Metro bundle verified 2026-11-05. Installable APK built via EAS 2026-11-06 (`com.daboggieman.seeker` v1.0.0, profile `preview`, keystore in EAS cloud; verified manifest + Hermes bundle; rebuild recipe in build docs 13). Runbook: build docs `13`. **Pending: device test off wifi (exit criterion — doubles as phase-2 exit)** | Install the APK (build page or host `~/Downloads`), Tailscale on the phone, first-run Settings → token → Test → Save; dev loop still `npx expo start --tunnel` |
-| 4 — Browser extension | not started | — | Manifest V3 |
+| 2 — Self-hosted deployment | done | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** — full eval through the deployed MCP path: recall@5 = 0.50, exactly baseline; protocol+auth verified over HTTP. Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: delete stale tailnet nodes (`search-engine`, `search-engine-1`) in the console → second-device query (sidecar joined 2026-11-05 as `search-engine-2`, tagged; MCP + REST verified over the tailnet path) | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06. **Exit met 2026-11-12:** same query from a second tailnet device (Waydroid node 100.101.53.85) returns live results — engine-side `POST /v1/search HTTP/1.1" 200` |
+| 3 — Mobile client | done | Expo SDK 58 scaffold (TS strict) in `mobile/` on `phase-3-mobile-client`: typed engine API client (bearer + `X-Request-Id` + engine error shape), keychain settings (expo-secure-store, token never bundled), search screen + settings modal; 6/6 unit tests, tsc clean, Metro bundle verified 2026-11-05. Installable APK built via EAS 2026-11-06 (`com.daboggieman.seeker` v1.0.0, profile `preview`, keystore in EAS cloud; verified manifest + Hermes bundle; rebuild recipe in build docs 13). Runbook: build docs `13`. **Exit criterion MET 2026-11-12** — field test on Waydroid (Android 13, Tailscale node `waydroid-x86-64-device` / 100.101.53.85): three fresh searches ('tailscale', 'hermes', 'jwt') proven on both sides — app UI results ('20 results · 621 ms' best) + engine log `POST /v1/search HTTP/1.1" 200` from the tailnet IP; keychain settings survived a cold restart with zero settings interaction. Earlier on-device failures root-caused: Android 13 cleartext block; fixed with https://search-engine-2.taile24e8b.ts.net (tailscale serve on the sidecar, user enabled Serve 2026-11-12) + `usesCleartextTraffic` in APK build `f332c422` (installed + re-verified in Waydroid). Mobile fixes + docs uncommitted on `phase-3-mobile-client` (user commits). Runbook: build docs `13` | Install the APK (build page or host `~/Downloads`), Tailscale on the phone, first-run Settings → token → Test → Save; dev loop still `npx expo start --tunnel` |
+| 4 — Browser extension | in progress | Kickoff 2026-11-12: `phase-4-browser-extension` worktree (phase-3 tree left untouched for the user's commit), MV3 scaffold | Manifest V3 |
 | 5 — Office add-in | not started | — | Office.js task pane |
 | 6 — OS-native hooks (optional) | not started | — | Only if still needed after Phase 5 |
 
