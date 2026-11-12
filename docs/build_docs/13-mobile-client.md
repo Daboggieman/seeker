@@ -12,6 +12,29 @@ Operational companion to [`07-client-adapters.md`](07-client-adapters.md) (Phase
 > `com.daboggieman.seeker`, version 1.0.0 (code 1), keystore held in EAS cloud
 > (Build Credentials `5V9KI99OkL`). Verified: manifest + `assets/index.android.bundle`
 > (Hermes) + `lib/arm64-v8a/*`. **Pending: the device test (exit criterion).**
+>
+> **2026-11-12: EXIT CRITERION MET** — field test on Waydroid (Android 13, SDK 33,
+> Tailscale node `waydroid-x86-64-device` / 100.101.53.85): search works from the
+> second tailnet device over `https://search-engine-2.taile24e8b.ts.net` (via
+> `tailscale serve` on the engine's sidecar). Engine-side proof:
+> `INFO: 100.101.53.85:0 - "POST /v1/search HTTP/1.1" 200 OK` for fresh searches
+> ('tailscale' → 20 results · 5814 ms; 'hermes' → 20 results · 621 ms after a full
+> cold restart with zero settings interaction — keychain persistence verified).
+> Also passes the Phase-2 exit criterion (same query from a second Tailnet device,
+> docs 12). A rebuild baking the https prefill + cleartext fallback was submitted
+> the same day (the running APK already works via typed settings).
+>
+> **2026-11-12: found why the app could never reach the engine on-device** —
+> Android 13 blocks cleartext `http://` fetches by default (no
+> `usesCleartextTraffic` in the manifest) → every call died as `NETWORK_ERROR`
+> before leaving the device, while curl from a shell worked fine. Fixes in
+> `mobile/`: default URL is now `https://search-engine-2.taile24e8b.ts.net`
+> (served by `tailscale serve` on the engine's sidecar, valid ts.net cert on
+> 443) and `expo-build-properties` sets `usesCleartextTraffic: true` so a
+> plain-`http://` URL (e.g. LAN debug) also works — over the tailnet the
+> payload is WireGuard-encrypted either way. One-time tailnet prerequisite:
+> Serve must be enabled (login.tailscale.com link printed by
+> `tailscale serve --bg 8420` on the sidecar).
 
 ## What it is
 
@@ -71,7 +94,11 @@ npx expo start --tunnel   # dev-server over ngrok; API calls still go direct via
 
 Open the project in Expo Go (scan the QR). First run opens Settings:
 
-1. Engine URL is prefilled with the deployed node (`http://search-engine-2.taile24e8b.ts.net:8420`)
+1. Engine URL is prefilled with the deployed node (`https://search-engine-2.taile24e8b.ts.net`
+   — HTTPS via `tailscale serve --bg 8420` on the engine's sidecar; requires the
+   tailnet's Serve feature to be enabled once). A plain `http://…:8420` URL also
+   works since 2026-11-12 (cleartext allowed in the manifest; tailnet traffic is
+   WireGuard-encrypted)
 2. Paste `SEEKER_API_TOKEN` (from the host's `/home/recoding/seeker/.env`)
 3. **Test** → expect "✓ engine reachable — N sources" → **Save**
 

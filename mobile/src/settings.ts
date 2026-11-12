@@ -13,7 +13,10 @@ const STORE_KEY = 'seeker.engine.v1';
 
 export const DEFAULT_SETTINGS: EngineSettings = {
   // This deployment's node on the tailnet (joined 2026-11-05, docs 12).
-  baseUrl: 'http://search-engine-2.taile24e8b.ts.net:8420',
+  // HTTPS via `tailscale serve` on the engine's sidecar (valid ts.net cert, port
+  // 443) — Android 13 blocks cleartext http:// fetches by default, so the plain
+  // :8420 URL only works from curl, never from the app.
+  baseUrl: 'https://search-engine-2.taile24e8b.ts.net',
   token: '',
 };
 
