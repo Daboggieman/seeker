@@ -64,5 +64,9 @@ services:
     volumes:
       - ./data:/data:ro            # back up the index; never write to it
       - ./backup.sh:/backup.sh:ro
+      # Backup destination: the container path below must equal RESTIC_REPOSITORY
+      # in .env (restic can't create a repo on an unmounted host path — found
+      # 2026-11-16 when the first init silently landed in the container layer).
+      - /home/recoding/seeker-backups:/backups
     entrypoint: /bin/sh /backup.sh
     restart: unless-stopped
