@@ -57,7 +57,9 @@ Built 2026-11-06, both builds finished (fingerprint `794b5dd4…`):
 - https://expo.dev/accounts/daboggieman/projects/seeker/builds/1f812021-6f6d-431f-96dc-6afb61272b32
 
 (Identical artifacts; APK also in the host's `~/Downloads/` as
-`application-27ca1a24-…apk`, 66.9 MB.) Rebuild after code changes:
+`application-27ca1a24-…apk`, 66.9 MB.) Superseded 2026-11-12: the current APK is
+rebuild `f332c422` (bakes in the https prefill + `usesCleartextTraffic`) — prefer it;
+the 2026-11-06 pair needs manual settings entry. Rebuild after code changes:
 
 ```bash
 cd /home/recoding/seeker/mobile
@@ -118,5 +120,5 @@ Tailnet device — docs 12).
   phone is future scope.
 - APK has no auto-update — rebuild + reinstall after changes (Expo Go remains the fast
   dev loop via `npx expo start --tunnel`).
-- `SEEKER_API_TOKEN` is still `dev-insecure-token` on the deployment — rotate before
-  daily use from the phone.
+- `SEEKER_API_TOKEN` was rotated 2026-11-17 — `dev-insecure-token` is dead (engine
+  401s it). Paste the live value from `/home/recoding/seeker/.env` in Settings.

@@ -25,9 +25,9 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
+- Single-screen app: `App.tsx` at `mobile/` (entry `index.ts`) is the only screen; there is no router. Screen state is React state; settings are a modal component (`src/components/SettingsModal.tsx`).
+- Shared code lives in `src/` (`engineApi.ts`, `settings.ts`, `theme.ts`, `components/`) with tests in `src/__tests__/`.
+- If multi-screen navigation is ever added, prefer Expo Router — but that is a new dependency, not currently in `package.json`.
 
 ## Building with EAS
 

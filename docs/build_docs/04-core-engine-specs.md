@@ -13,7 +13,7 @@ Each connector implements a common interface:
 
 | Connector | Mechanism |
 |---|---|
-| **Filesystem** | `watchdog` for live change events; initial full walk on first run. *Implemented 2026-10-26 as polling (`list_changed_items` by mtime) — watchdog deferred until the pipeline can receive events (open decision 4); also skips dot-dirs, never follows symlinks, and since 2026-10-30 supports `exclude_dirs` + code-extension mime overrides* |
+| **Filesystem** | `watchdog` for live change events; initial full walk on first run. *Implemented 2026-10-26 as polling (`list_changed_items`); every sync is a full walk — service.py never passes `since`, and unchanged detection is sha256 content-hash + chunk-model match in indexer.py, not mtime — watchdog deferred until the pipeline can receive events (open decision 4); also skips dot-dirs, never follows symlinks, and since 2026-10-30 supports `exclude_dirs` + code-extension mime overrides* |
 | **Google Drive** | Drive API v3, OAuth2, incremental sync via `changes.list` |
 | **Notion** | Notion API, paginated `search` + block children fetch |
 | **Email** | IMAP or Gmail API, filtered to specific labels/folders |

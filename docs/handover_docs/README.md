@@ -8,7 +8,9 @@ is *meant* to be.
 dates quickly. Everything else is reference and stays true until the thing it describes
 changes.
 
-Last updated: **2026-10-30** — eval set built (baseline recall@5 = 0.50, measured); reference
+Last updated: **2026-11-17** — phases 1–4 exits all met (extension exit met in Brave
+2026-11-13); ops day 2026-11-17: 4 sources indexed (448 docs / 820 chunks), nightly
+backups fixed and verified, token rotated, daily auto-sync timer installed. Reference
 docs `03`–`09` below are still planned, not written.
 
 ## The resume point

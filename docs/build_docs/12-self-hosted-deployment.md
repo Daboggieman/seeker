@@ -72,19 +72,51 @@ deployed index). Fix applied: `systemctl --user disable --now seeker-engine.serv
 the dev instance stays available on demand (`systemctl --user start seeker-engine`,
 then stop it again before compose work) but never races the container at boot.
 
+## Sources, mounts & scheduled sync (2026-11-17)
+
+Sources are folders bind-mounted read-only into the engine container; a source's
+`root_path` is the container-side path. Register with `POST /v1/sources` (does NOT
+index — follow with `POST /v1/sources/{id}/sync`). Never mount all of `$HOME`: it
+sweeps loose secret files (wallet/2FA/key notes) into the searchable index.
+
+As of 2026-11-17 four sources are mounted: `gsmhub` (`${SEEKER_SOURCES}` →
+`/sources/home`), `cee-tailor` → `/sources/cee-tailor`, `ai-router-setup` →
+`/sources/ai-router-setup`, `ant2oia` → `/sources/ant2oia` (463 documents / 910 chunks as of 2026-11-23).
+
+Syncs run automatically daily 09:00: the systemd user unit `seeker-sync.timer` fires
+`scripts/sync-all.sh`, which lists sources from the API and syncs each, reading the
+token fresh from `.env` on every run (rotation needs no change there).
+
 ## Backup & restore
 
-The `backup` service runs `restic backup /data` on a loop (`BACKUP_INTERVAL_SECONDS`,
-default 24h), keeping 7 daily / 4 weekly / 6 monthly snapshots, then prunes. Configure in
-`.env`: `RESTIC_REPOSITORY` + `RESTIC_PASSWORD` plus the backend's credentials (B2 or S3
+The `backup` service runs a restic loop (`BACKUP_INTERVAL_SECONDS`, default 24h),
+keeping 7 daily / 4 weekly / 6 monthly snapshots, then prunes. Configure in `.env`:
+`RESTIC_REPOSITORY` + `RESTIC_PASSWORD` plus the backend's credentials (B2 or S3
 examples in `.env.example`).
+
+Two constraints found 2026-11-16, both handled by the current `backup.sh`:
+
+- **`RESTIC_REPOSITORY` must be a path mounted into the container** — restic cannot
+  create a repo on an unmounted host path (the first `init` silently landed in the
+  container layer and vanished with `--rm`). The compose file mounts
+  `/home/recoding/seeker-backups:/backups` and `.env` sets `RESTIC_REPOSITORY=/backups`.
+- **Restic's direct reads of the live sqlite trio fail with kernel EIO** while the
+  engine holds the WAL mmap'd (plain sequential reads of the same files work). The
+  script stages a copy with `cp` and restics the staged copy; a copy torn by a
+  concurrent sync degrades to "slightly stale, still consistent" on restore (sqlite
+  validates WAL frames by salt + checksum and ignores a mismatched one).
+
+On failure the loop retries every 15 minutes (`BACKUP_RETRY_SECONDS`), not 24 h.
 
 ```bash
 # Restore the latest snapshot (from any machine with the repo credentials):
-docker compose run --rm backup sh -c \
-  'restic restore latest --target /tmp-restore && ls /tmp-restore/data'
+docker compose run --rm --entrypoint restic backup restore latest --target /tmp-restore
 # Then stop the engine, replace ./data/seeker.db (and -wal/-shm if present), restart.
 ```
+
+The `--entrypoint restic` override is required: the service entrypoint is the backup
+loop script, and `docker compose run backup restic …` would start the loop instead of
+running restic.
 
 Backups mount `./data` read-only — the backup container can never corrupt the index.
 Test a restore after first configuring the repository; an untested backup is not a backup.
@@ -92,7 +124,7 @@ Test a restore after first configuring the repository; an untested backup is not
 ## Token rotation
 
 Rotate `SEEKER_API_TOKEN` in `.env` (rotate if a device is lost — docs 06), then
-`docker compose up -d engine` to recreate the container. Update every client's bearer
+`docker compose up -d` (all services — never `up -d engine` alone, see Troubleshooting) to recreate the container. Update every client's bearer
 token (Claude Code MCP registration, mobile, extension) in the same breath — there is a
 single shared secret at personal scale.
 
@@ -107,4 +139,4 @@ single shared secret at personal scale.
 | Sidecar registers a NEW node on every restart, consuming the auth key | containerboot runs tailscaled with `--state=mem:` unless `TS_STATE_DIR` is set (found 2026-11-05) — the compose file sets it to `/var/lib/tailscale` (the mounted volume) |
 | Recreating the engine left the sidecar dead (`network namespace ... not running`) | The sidecar lives in the engine's netns — recreating the engine orphans it. Always `docker compose up -d` (all services), never `up -d engine` alone (found 2026-11-05) |
 | Compose up fails: port 8420 in use | Native `seeker-engine.service` still running — stop it (`systemctl --user disable --now seeker-engine` if it came back after a reboot) |
-| `backup` logs `restic backup failed` every interval | Repository not initialized — run `docker compose run --rm backup sh -c 'restic init'` once (it loops forever by design; check `docker compose logs backup`) |
+| `backup` logs `restic backup failed` every interval | Repository not initialized or unreadable — run `docker compose run --rm --entrypoint restic backup init` once (the `--entrypoint` override is required — the service entrypoint is the loop script); then `docker compose up -d --force-recreate backup` to run immediately. The loop retries every 15 min by design (`BACKUP_RETRY_SECONDS`) |

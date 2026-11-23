@@ -24,6 +24,12 @@ Read in this order:
 10. **09-roadmap.md** — phased milestones with exit criteria
 11. **10-open-decisions.md** — open questions, defaults, and how to close them
 12. **11-coding-agent-rules.md** — standing rules every coding session works under
+13. **12-self-hosted-deployment.md** — the live deployment runbook (compose, tailscale serve, backup, token rotation)
+14. **13-mobile-client.md** — mobile app runbook (build, install, field-test recipe)
+15. **14-browser-extension.md** — browser extension runbook (load, configure, exit test)
+
+For *using* Seeker (as opposed to building it), read
+[`../user_manual.md`](../user_manual.md) — the owner-operator handbook.
 
 ## The one-paragraph summary
 

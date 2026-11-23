@@ -59,6 +59,8 @@ still feels necessary once the above are in daily use.
 
 ## Current status
 
-Planning phase. Phase 1 not started. The running record of where the build actually is lives in
+Phases 1–4 exit criteria are met (phases 2–3: 2026-11-12; phase 4: 2026-11-13). Phase 5
+(Office add-in) is not built; Phase 6 (optional OS hooks) is not built. The running record
+of where the build actually is lives in
 [`../handover_docs/01-current-state.md`](../handover_docs/01-current-state.md) — this roadmap
 holds the plan, never the status.

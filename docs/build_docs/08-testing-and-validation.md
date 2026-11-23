@@ -11,7 +11,9 @@ your real files. This is the engine's quality bar — not vibes.
 user's gsmhub corpus) and `run_eval.py` (indexes incrementally, runs the queries through the
 real backend, prints per-query hits + recall@5). The recall@5 record itself lives in the
 handover's dated entries ([`../handover_docs/01-current-state.md`](../handover_docs/01-current-state.md))
-— baseline **recall@5 = 0.50, measured 2026-10-30**.
+— baseline **recall@5 = 0.50, measured 2026-10-30** on the gsmhub-only corpus
+(re-confirmed 2026-11-04 through the deployed MCP path; the corpus has since grown to
+4 sources — re-baseline before any tuning).
 
 - Track **recall@5** as you tune chunking, embedding batch size, and reranking.
 - Every change to chunking, embedding, or the query pipeline re-runs the eval set.

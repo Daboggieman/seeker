@@ -1,6 +1,7 @@
 # Universal Semantic Search — Technical Build Docs
 
-**Status:** Planning / pre-build
+**Status:** Historical plan of record — written pre-build; the system is built through
+Phase 4 (live status: `docs/handover_docs/01-current-state.md`)
 **Scope:** A self-hosted semantic search engine over personal files (filesystem, cloud docs, email, PDFs) with adapters for VS Code, mobile, browser, and Office — reachable from anywhere over a private network.
 
 ---

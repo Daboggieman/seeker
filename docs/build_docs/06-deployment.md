@@ -7,9 +7,10 @@ Source of record: spec §8 (Deployment), §10 (Security & Privacy).
 > pre-flight verified end-to-end 2026-11-02). `SEEKER_EXCLUDE_DIRS` (new 2026-11-03)
 > prunes build-output dirs from every source — set it for code corpora. Operational
 > runbook: [`12-self-hosted-deployment.md`](12-self-hosted-deployment.md) — incl. the
-> Ollama-bind fix and the native-engine port conflict. Pending for exit: Tailscale
-> auth key in `.env` (the image ignores OAuth client creds — 2026-11-04), then the
-> second-device query. Until the stack
+> Ollama-bind fix and the native-engine port conflict. Exit criterion MET 2026-11-12:
+> Tailscale auth key set in `.env` (the image ignores OAuth client creds — 2026-11-04)
+> and `tailscale serve` 443→8420 enabled on sidecar node `search-engine-2`; the
+> second-device query works (Waydroid node, engine log `POST /v1/search 200`). Until the stack
 > was deployed, the engine ran natively as systemd **user** services
 > (`ollama.service` still does; `seeker-engine.service` on `:8420` is stopped while the
 > container holds the port, config in `~/.config/seeker/engine.env`) — see handover `01`.
@@ -24,16 +25,18 @@ services:
       - "8420:8420"
     volumes:
       - ./data:/data          # sqlite-vec file + config
-      - ~/Documents:/sources/home:ro
+      - ${SEEKER_SOURCES}:/sources/home:ro
     environment:
-      - OLLAMA_HOST=http://host.docker.internal:11434
+      - SEEKER_API_TOKEN=${SEEKER_API_TOKEN}
+      - SEEKER_EMBEDDING_BASE_URL=http://host.docker.internal:11434
     restart: unless-stopped
 
   tailscale:
     image: tailscale/tailscale
-    hostname: search-engine
     environment:
       - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_HOSTNAME=search-engine     # `hostname:` is rejected alongside network_mode: service:…
+      - TS_STATE_DIR=/var/lib/tailscale   # without this every start re-registers a node
     network_mode: service:engine
     volumes:
       - ./ts-state:/var/lib/tailscale
@@ -50,8 +53,9 @@ The embedding backend runs on the host, not in the container — the engine reac
 Ollama serve both the engine and any other local model use.
 
 > **Linux note (recorded 2026-10-24):** `host.docker.internal` does not resolve on Linux by
-> default. The compose file will need `extra_hosts: ["host.docker.internal:host-gateway"]`
-> on the engine service — the spec's skeleton was written for Docker Desktop.
+> default. The compose file needs `extra_hosts: ["host.docker.internal:host-gateway"]`
+> on the engine service (present in the live docker-compose.yml since deployment) —
+> the spec's skeleton was written for Docker Desktop.
 
 ## Security posture
 

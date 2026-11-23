@@ -24,6 +24,50 @@ re-measure.
 
 ## What is being worked on right now
 
+**2026-11-17 — Ops day: user manual written; 3 new sources indexed; backups fixed; token rotated; daily auto-sync installed.**
+
+- **User manual:** `docs/user_manual.md` (12 sections, owner-operator level); styled
+  HTML copy at `~/Downloads/seeker-manual.html`.
+- **Sources:** `cee-tailor`, `ai-router-setup`, `ant2oia` mounted (compose volume
+  lines), registered and synced alongside a full gsmhub re-sync → **4 sources,
+  448 documents / 820 chunks** (was 1 source, 211/288). Syncs are now automatic daily
+  09:00 (systemd --user `seeker-sync.timer` → `scripts/sync-all.sh`; reads the token
+  fresh from `.env` each run, so rotation needs no change there).
+- **Backups FIXED (2026-11-17):** two root causes — (1) `RESTIC_REPOSITORY` must be a
+  path mounted into the backup container (the first `restic init` silently landed in
+  the container layer and vanished; now `.env` sets `/backups` + compose mounts
+  `~/seeker-backups:/backups`); (2) restic gets kernel EIO reading the live sqlite
+  trio while the engine holds the WAL mmap'd (plain reads work) → `backup.sh` now
+  stages a copy with `cp` and restics that; retries every 15 min on failure (was 24 h).
+  Snapshots verified (10.2 MiB, all three db files).
+- **Token ROTATED (2026-11-17):** `dev-insecure-token` is dead (engine 401s it; new
+  token verified against `/v1/search`). Live value in `.env` (`SEEKER_API_TOKEN`) and
+  updated in `~/.claude.json` (seeker MCP config). Clients must re-paste: Brave
+  extension options + Waydroid app settings.
+- **Phase-4 exit MET in Brave 2026-11-13** (user's own session: overlay in Google
+  Docs; engine log `POST /v1/search HTTP/1.1" 200` from the docker gateway).
+  Phase-4 files uncommitted (user commits).
+
+**2026-11-12 — Phase 2 + 3 field tests passed (exits MET); Phase 4 browser-extension scaffold complete, awaiting user exit test.**
+
+- **Exits:** phase 2 (second-device query) and phase 3 (mobile field test) proven live
+  on Waydroid — evidence in the phase table below and build docs 13. Root cause of the
+  earlier on-device failures: Android 13 cleartext block → https endpoint via tailscale
+  serve (user-enabled 2026-11-12) + `usesCleartextTraffic` (build f332c422).
+- **Phase 4:** scaffold complete in `.worktrees/phase-4-ext/` on
+  `phase-4-browser-extension` (phase-3 tree untouched for the user's commit) —
+  architecture in [ADR-0003](../adr/0003-browser-extension-architecture.md), runbook in
+  build docs 14. 10/10 unit tests; contract round-trip against the live engine
+  (5 results · 809 ms; wrong token → `UNAUTHORIZED`). Two Brave manifest-load
+  failures fixed 2026-11-13: `Ctrl+Alt+S` rejected at parse time (AltGr aliasing) →
+  `Alt+Shift+S`; dual background keys rejected (`kInvalidBackgroundCombination`) →
+  per-browser manifests (`manifest.json` Chrome-family / `manifest-firefox.json`
+  Firefox). Visible symlink for loading: `~/Downloads/seeker-extension`. Remaining:
+  the user-side Brave exit test — `Alt+Shift+S` overlay inside Google Docs (steps in
+  build docs 14).
+- Housekeeping (non-blocking): stale tailnet nodes `search-engine` / `search-engine-1`
+  still to delete in the Tailscale console.
+
 **2026-11-04 — MCP field test passed (on-host); reboot race between native unit and container found and fixed.**
 
 - **Full eval through the deployed MCP path (2026-11-04): all 20 queries via
@@ -317,7 +361,7 @@ enters only at Phase 2.
 | 1 — Core engine + MCP server | done | chunker, embeddings/LLM backends, vector store, filesystem connector, index pipeline, REST query API + MCP shim; ruff clean; 2026-10-26. Real backend via native Ollama, e2e verified 2026-10-29 (ADR-0002). MCP-over-HTTP transport fixed + systemd services 2026-10-30. Eval set built, baseline recall@5 = 0.50 measured 2026-10-30. Bearer token on the MCP mount + loopback-only serving verified live 2026-10-30; 153/153 tests | Done — user moved to Phase 2 on 2026-10-30. **Process deviation:** the final phase-1 work landed on `master` instead of `phase_1_core_engine` (branch-per-phase was never written into build docs `11`; rule added there 2026-10-30). Reconciled 2026-11-02: `phase_1_core_engine` now points at `master`; its 14 branch-only commits were verified superseded (incl. `test_auth.py`/`test_e2e_api.py`, which targeted the removed `seeker.api.auth` module — nothing salvageable) |
 | 2 — Self-hosted deployment | done | **Engine container live on the host 2026-11-03** (native engine stopped+disabled 2026-11-04 after a reboot race; gsmhub indexed: 211 docs / 288 chunks, 196 build-artifact docs pruned after `SEEKER_EXCLUDE_DIRS` added). **MCP field test passed 2026-11-04** — full eval through the deployed MCP path: recall@5 = 0.50, exactly baseline; protocol+auth verified over HTTP. Pre-flight verified 2026-11-02 end-to-end. Ollama rebound to `0.0.0.0` via systemd drop-in (exposure trade-off documented). Runbook: build docs `12`. 161 tests green, ruff clean (2026-11-03). Remaining for exit: delete stale tailnet nodes (`search-engine`, `search-engine-1`) in the console → second-device query (sidecar joined 2026-11-05 as `search-engine-2`, tagged; MCP + REST verified over the tailnet path) | Docker Compose + Tailscale sidecar; see Linux `host-gateway` note in build docs 06. **Exit met 2026-11-12:** same query from a second tailnet device (Waydroid node 100.101.53.85) returns live results — engine-side `POST /v1/search HTTP/1.1" 200` |
 | 3 — Mobile client | done | Expo SDK 58 scaffold (TS strict) in `mobile/` on `phase-3-mobile-client`: typed engine API client (bearer + `X-Request-Id` + engine error shape), keychain settings (expo-secure-store, token never bundled), search screen + settings modal; 6/6 unit tests, tsc clean, Metro bundle verified 2026-11-05. Installable APK built via EAS 2026-11-06 (`com.daboggieman.seeker` v1.0.0, profile `preview`, keystore in EAS cloud; verified manifest + Hermes bundle; rebuild recipe in build docs 13). Runbook: build docs `13`. **Exit criterion MET 2026-11-12** — field test on Waydroid (Android 13, Tailscale node `waydroid-x86-64-device` / 100.101.53.85): three fresh searches ('tailscale', 'hermes', 'jwt') proven on both sides — app UI results ('20 results · 621 ms' best) + engine log `POST /v1/search HTTP/1.1" 200` from the tailnet IP; keychain settings survived a cold restart with zero settings interaction. Earlier on-device failures root-caused: Android 13 cleartext block; fixed with https://search-engine-2.taile24e8b.ts.net (tailscale serve on the sidecar, user enabled Serve 2026-11-12) + `usesCleartextTraffic` in APK build `f332c422` (installed + re-verified in Waydroid). Mobile fixes + docs uncommitted on `phase-3-mobile-client` (user commits). Runbook: build docs `13` | Install the APK (build page or host `~/Downloads`), Tailscale on the phone, first-run Settings → token → Test → Save; dev loop still `npx expo start --tunnel` |
-| 4 — Browser extension | in progress | Kickoff 2026-11-12: `phase-4-browser-extension` worktree (phase-3 tree left untouched for the user's commit), MV3 scaffold | Manifest V3 |
+| 4 — Browser extension | done | **Scaffold complete 2026-11-12; Brave loader fixes 2026-11-13** on `phase-4-browser-extension` (worktree `.worktrees/phase-4-ext/`, phase-3 tree untouched): per-browser MV3 manifests — `manifest.json` (Chrome/Brave, `service_worker`) + `manifest-firefox.json` (Firefox, event-page `scripts`) — Chromium rejects both keys set (`kInvalidBackgroundCombination`); `Alt+Shift+S` / `Command+Shift+S` toggle (Chromium rejects `Ctrl+Alt+<key>` suggested keys at parse time — AltGr aliasing); both failures hit in Brave and fixed (ADR-0003 §1). Token confined to the background worker (`chrome.storage.local`; content script and page never see it), closed-shadow-DOM overlay (hit-click copies path, Esc closes), options page (URL + token + Test probe), UMD engine client shared by node tests and worker. 10/10 unit tests; live contract round-trip (loopback): 5 results · 809 ms, wrong token → `UNAUTHORIZED`. Docs: ADR-0003 + runbook build docs 14. **Exit criterion MET 2026-11-13: overlay inside Google Docs in Brave (user's own session); engine log `POST /v1/search HTTP/1.1" 200` from 172.19.0.1 (docker gateway). Phase-4 files + manual + handover are uncommitted (user commits)** | `brave://extensions` → Developer mode → Load unpacked → `extension/` folder (visible symlink at `~/Downloads/seeker-extension`); Seeker toolbar icon → token → Test → Save; `Alt+Shift+S` in Google Docs (rebind at `brave://extensions/shortcuts` if taken) |
 | 5 — Office add-in | not started | — | Office.js task pane |
 | 6 — OS-native hooks (optional) | not started | — | Only if still needed after Phase 5 |
 
