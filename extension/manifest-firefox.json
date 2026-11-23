@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Seeker",
+  "version": "0.1.0",
+  "description": "Search your indexed files from any page — overlay over the Seeker engine REST API.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://search-engine-2.taile24e8b.ts.net/*",
+    "http://localhost:8420/*",
+    "http://127.0.0.1:8420/*"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "action": {
+    "default_title": "Seeker — click for settings"
+  },
+  "commands": {
+    "toggle-seeker": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Toggle the Seeker search overlay"
+    }
+  }
+}

@@ -1,0 +1,384 @@
+<title>Seeker User Manual</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#f7f8fa;--panel:#ffffff;--fg:#1b1f27;--muted:#5b6472;--faint:#8a93a3;--accent:#2c5fc4;--accent-soft:#e8eefc;--border:#e2e5ec;--code-bg:#f0f2f6;--warn-bg:#fdf3e4;--warn-border:#d9a441;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#14171d;--panel:#1b2028;--fg:#e5e9f0;--muted:#9aa4b5;--faint:#6d7789;--accent:#7da3ec;--accent-soft:#232e44;--border:#2b323e;--code-bg:#20262f;--warn-bg:#2e2716;--warn-border:#a9853c;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171d;--panel:#1b2028;--fg:#e5e9f0;--muted:#9aa4b5;--faint:#6d7789;--accent:#7da3ec;--accent-soft:#232e44;--border:#2b323e;--code-bg:#20262f;--warn-bg:#2e2716;--warn-border:#a9853c;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:15px/1.65 Inter,system-ui,sans-serif;margin:0;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{display:grid;grid-template-columns:1fr;max-width:1060px;margin:0 auto;padding-block:24px 64px}
+@media(min-width:940px){.wrap{grid-template-columns:230px 1fr;gap:40px}}
+nav.toc{display:none}
+@media(min-width:940px){nav.toc{display:block;position:sticky;top:24px;align-self:start;font-size:13px}}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:5px 10px;border-left:2px solid var(--border)}
+nav.toc a:hover{color:var(--fg);border-left-color:var(--accent)}
+nav.mnav{margin:0 0 20px}
+nav.mnav summary{cursor:pointer;font-weight:600;padding:10px 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px;list-style:none}
+nav.mnav summary::-webkit-details-marker{display:none}
+nav.mnav a{display:block;padding:7px 4px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--border)}
+nav.mnav a:last-child{border-bottom:none}
+@media(min-width:940px){nav.mnav{display:none}}
+header.top{padding:8px 0 28px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.kicker{font:600 11px/1 Space Grotesk,Inter,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+h1{font:600 34px/1.15 Space Grotesk,Inter,sans-serif;margin:10px 0;letter-spacing:-.01em}
+.standfirst{color:var(--muted);max-width:60ch}
+main{min-width:0}
+section{padding-top:34px}
+h2{font:600 21px/1.25 Space Grotesk,Inter,sans-serif;margin:0 0 14px}
+h2 .no{color:var(--faint);font-variant-numeric:tabular-nums;margin-right:10px;font-weight:500}
+h3{font:600 16px/1.3 Space Grotesk,Inter,sans-serif;margin:26px 0 8px}
+p{margin:10px 0;max-width:72ch}
+ul,ol{margin:10px 0;padding-left:22px;max-width:70ch}
+li{margin:5px 0}
+a{color:var(--accent)}
+code{font:13.5px/1.55 "JetBrains Mono",ui-monospace,monospace;background:var(--code-bg);border-radius:5px;padding:2px 6px}
+pre{position:relative;background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;overflow-x:auto;margin:14px 0}
+pre code{background:none;padding:0;font-size:13px}
+.cp{position:absolute;top:8px;right:8px;font:500 11px Inter,sans-serif;color:var(--muted);background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:3px 9px;cursor:pointer;opacity:0;transition:opacity .15s}
+pre:hover .cp,.cp:focus{opacity:1}
+table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+th{text-align:left;font:600 12px/1.4 Inter,sans-serif;letter-spacing:.03em;color:var(--muted);border-bottom:2px solid var(--border);padding:7px 10px}
+td{border-bottom:1px solid var(--border);padding:8px 10px;vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+.tbl{overflow-x:auto}
+.callout{background:var(--warn-bg);border:1px solid var(--warn-border);border-radius:10px;padding:12px 16px;margin:16px 0;max-width:72ch}
+.callout .t{font-weight:600;font-size:13px;margin-bottom:4px}
+.note{background:var(--accent-soft);border-radius:10px;padding:12px 16px;margin:16px 0;max-width:72ch;font-size:14px}
+.diagram{background:var(--code-bg);border:1px solid var(--border);border-radius:10px;padding:14px;overflow-x:auto}
+.diagram pre{border:none;background:none;margin:0;padding:0;font-size:12px;line-height:1.45}
+footer{margin-top:56px;padding-top:18px;border-top:1px solid var(--border);color:var(--faint);font-size:13px}
+</style>
+<div class="wrap">
+<nav class="mnav"><details><summary>Contents</summary>
+<a href="#s1">1 · What Seeker is</a><a href="#s2">2 · How it fits together</a><a href="#s3">3 · Words to know</a><a href="#s4">4 · Daily use</a><a href="#s5">5 · Making files searchable</a><a href="#s6">6 · Managing the engine</a><a href="#s7">7 · Backups</a><a href="#s8">8 · Security &amp; privacy</a><a href="#s9">9 · Troubleshooting</a><a href="#s10">10 · API reference</a><a href="#s11">11 · Current state &amp; limits</a><a href="#s12">12 · FAQ</a>
+</details></nav>
+<nav class="toc">
+<a href="#s1">1 · What Seeker is</a><a href="#s2">2 · How it fits together</a><a href="#s3">3 · Words to know</a><a href="#s4">4 · Daily use</a><a href="#s5">5 · Making files searchable</a><a href="#s6">6 · Managing the engine</a><a href="#s7">7 · Backups</a><a href="#s8">8 · Security &amp; privacy</a><a href="#s9">9 · Troubleshooting</a><a href="#s10">10 · API reference</a><a href="#s11">11 · Current state &amp; limits</a><a href="#s12">12 · FAQ</a>
+</nav>
+<main>
+<header class="top">
+<div class="kicker">Owner-operator handbook</div>
+<h1>Seeker User Manual</h1>
+<p class="standfirst">Your personal search engine over your own files — self-hosted, private, searchable from any browser page, your phone, or an AI assistant. Every command and number here was verified against the live deployment on 2026-11-23.</p>
+</header>
+<section id="s1"><h2><span class="no">1</span>What Seeker is</h2>
+<p>Seeker is a <strong>personal search engine for your own files</strong>. You point it at folders on this machine ("sources"); it reads them, splits them into pieces, and builds a semantic index — meaning you can search by <em>what a document is about</em>, not just by exact keywords. You then search that index from anywhere:</p>
+<ul>
+<li>the <strong>browser overlay</strong> (press <code>Alt+Shift+S</code> on any web page, including Google Docs),</li>
+<li>the <strong>phone app</strong> (works off wifi, over your private Tailscale network),</li>
+<li>an <strong>AI assistant</strong> (Claude, via the MCP protocol),</li>
+<li>or <strong>raw API calls</strong> (curl).</li>
+</ul>
+<p>Everything runs on your hardware. Nothing is sent to any cloud service — search queries, documents, and embeddings all stay on this machine or inside your tailnet.</p>
+<div class="callout"><div class="t">What Seeker is not</div>It does not search the web, it does not search <em>inside the page you have open</em> (that's the browser's own Ctrl+F), and it does not look at the document you're viewing — the overlay is a window onto your indexed files, available from wherever you happen to be.</div>
+</section>
+<section id="s2"><h2><span class="no">2</span>How the system fits together</h2>
+<div class="diagram"><pre> this machine (the host — NOT a Tailscale node)
+ ┌────────────────────────────────────────────────────────────┐
+ │  Ollama (systemd user unit "ollama.service", port 11434)   │
+ │    └─ embedding model: nomic-embed-text (768 dimensions)   │
+ │                                                            │
+ │  Docker Compose stack  (lives in /home/recoding/seeker)    │
+ │   ├─ seeker-engine-1    the engine — REST API on           │
+ │   │                     127.0.0.1:8420 (host only)         │
+ │   ├─ seeker-tailscale-1 sidecar sharing the engine's net-  │
+ │   │                     work; tailnet node "search-        │
+ │   │                     engine-2" (100.89.242.5); serves   │
+ │   │                     https://search-engine-2.           │
+ │   │                     taile24e8b.ts.net (443 → 8420)     │
+ │   └─ seeker-backup-1    restic backup loop (working; §7)   │
+ │                         fixed 2026-11-17                   │
+ │                                                            │
+ │  ./data/seeker.db        the index — the only durable state│
+ └────────────────────────────────────────────────────────────┘
+        │ loopback                    │ tailnet (encrypted)
+        ▼                             ▼
+  Brave + extension             phone / Waydroid app
+  (http://127.0.0.1:8420)       (https://search-engine-2.taile24e8b.ts.net)</pre></div>
+<p>Two network facts that trip people up:</p>
+<ol>
+<li><strong>The host is not a Tailscale node.</strong> The name <code>search-engine-2.taile24e8b.ts.net</code> only resolves from <em>inside</em> the tailnet. From this machine, use <code>http://127.0.0.1:8420</code>.</li>
+<li><strong>Other devices on your tailnet</strong> (the phone) cannot reach <code>127.0.0.1</code> — they use the ts.net address above.</li>
+</ol>
+<p>Both addresses serve the same engine; the token is the same.</p>
+</section>
+<section id="s3"><h2><span class="no">3</span>Words to know</h2>
+<div class="tbl"><table>
+<thead><tr><th>Word</th><th>Meaning</th></tr></thead>
+<tbody>
+<tr><td><strong>Engine</strong></td><td>The server program that stores the index and answers searches.</td></tr>
+<tr><td><strong>Source</strong></td><td>A folder registered with the engine. Each has an id (e.g. <code>gsmhub</code>), a root path, and a last-synced timestamp.</td></tr>
+<tr><td><strong>Document</strong></td><td>One file in a source. 463 documents indexed as of 2026-11-23.</td></tr>
+<tr><td><strong>Chunk</strong></td><td>A piece of a document (~300–500 words, ~50-word overlap between neighbours) that gets embedded and searched. Chunks remember their PDF page number. 910 chunks as of 2026-11-23.</td></tr>
+<tr><td><strong>Embedding</strong></td><td>A numeric vector describing a chunk's meaning. Similar meanings → nearby vectors. Built locally by Ollama.</td></tr>
+<tr><td><strong>Semantic search</strong></td><td>Matching by meaning. "how do I rotate the token" can find a doc that says "change the bearer secret".</td></tr>
+<tr><td><strong>Sync</strong></td><td>Walk a source's files and update the index. Every sync is a full walk; files whose content is unchanged (matched by hash) are skipped for re-indexing. Runs automatically every day at 09:00 (§5); you can also trigger it manually.</td></tr>
+<tr><td><strong>top_k</strong></td><td>How many results a search returns. API default 5; the browser overlay asks for 20.</td></tr>
+<tr><td><strong>Score</strong></td><td>Cosine similarity from -1 to 1. Higher is better; ~0.5–0.8 is a strong hit in practice.</td></tr>
+<tr><td><strong>Snippet</strong></td><td>The first ~240 characters of the matched chunk.</td></tr>
+<tr><td><strong>Bearer token</strong></td><td>The shared password every client sends with each call. Rotated 2026-11-17 — the live value is in <code>/home/recoding/seeker/.env</code> (<code>SEEKER_API_TOKEN</code>); see §8.</td></tr>
+<tr><td><strong>Tailnet</strong></td><td>Your private Tailscale network. Devices in it can talk to each other over an encrypted tunnel from anywhere.</td></tr>
+</tbody></table></div>
+</section>
+<section id="s4"><h2><span class="no">4</span>Daily use</h2>
+<h3>4.1 The browser overlay — Brave (your main browser)</h3>
+<p>The overlay is a search panel that slides over any web page. Install once:</p>
+<ol>
+<li>Open <code>brave://extensions</code> → toggle <strong>Developer mode</strong> (top-right).</li>
+<li>Click <strong>Load unpacked</strong> → select the <code>extension/</code> folder. A visible shortcut to it lives at <strong><code>/home/recoding/Downloads/seeker-extension</code></strong> (the real path is a hidden dot-folder inside the seeker repo worktree).</li>
+<li>Click the <strong>Seeker toolbar icon</strong> (puzzle piece → pin it). That opens <strong>Options</strong>.</li>
+<li>Set <strong>Engine URL</strong> to <code>http://127.0.0.1:8420</code> (host!) and paste the bearer token → <strong>Save</strong> → <strong>Test</strong> → expect <code>✓ engine reachable — N source(s)</code> (the count equals your registered sources — 4 as of 2026-11-23).</li>
+<li>Press <strong><code>Alt+Shift+S</code></strong> on any page → the overlay opens.</li>
+</ol>
+<p>Using it:</p>
+<ul>
+<li><strong>Type, then Enter</strong> — results appear under the search box.</li>
+<li><strong>Source chips</strong> under the box (<code>All</code>, one per source) filter the search — click a chip to restrict, click again for All.</li>
+<li><strong>Click a result</strong> → its file path is copied to your clipboard (status line confirms <code>Copied path: …</code>). Paste it wherever you need it.</li>
+<li><strong>Esc</strong> or click the dark background → close.</li>
+<li>The status line reports <code>N results · X ms</code>, or an error code (see §9).</li>
+</ul>
+<div class="note"><strong>Notes:</strong> the shortcut is <code>Alt+Shift+S</code> on Linux/Windows, <code>Command+Shift+S</code> on Mac — Chromium rejects <code>Ctrl+Alt</code> shortcuts (they collide with AltGr text input), which is why it isn't Ctrl+Alt+S. Rebind at <code>brave://extensions/shortcuts</code> if it clashes. Pages loaded <em>before</em> the extension was installed or reloaded don't have the overlay until you refresh them (F5). <code>brave://</code> pages never get content scripts. The token lives only in the extension's background worker; web pages can't see it, and results render in a closed shadow-DOM the page can't read.</div>
+<h3>4.2 The overlay — Firefox</h3>
+<p>Firefox needs its own manifest (Chromium refuses a background config that lists both forms, Firefox needs the list form):</p>
+<ol>
+<li><code>about:debugging#/runtime/this-firefox</code> → <strong>Load Temporary Add-on…</strong> → pick <code>extension/manifest-firefox.json</code> (the file, not the folder).</li>
+<li>Same options flow as above (puzzle icon → ⚙ → Options), same shortcut.</li>
+</ol>
+<p>Temporary means Firefox unloads it on exit — reload the same way next session. If it becomes daily-use, decide about signing (AMO unlisted); not blocking.</p>
+<h3>4.3 The phone app (Waydroid / any Android)</h3>
+<p>The app (<code>com.daboggieman.seeker</code>) searches the same engine over the tailnet.</p>
+<ol>
+<li>Install the APK from the build pages at expo.dev (account <strong>daboggieman</strong>). Upgrading with <code>adb install -r</code> preserves settings.</li>
+<li>Make sure the <strong>Tailscale app in Waydroid is connected</strong> (it disconnects when the host reboots — reopen the Tailscale app and toggle on).</li>
+<li>In the app: <strong>Settings</strong> → engine URL is prefilled with <code>https://search-engine-2.taile24e8b.ts.net</code> (correct for the phone — keep it) → paste the token → <strong>Test</strong> → <strong>Save</strong>. Settings persist in the phone's secure keychain across restarts.</li>
+<li>Search from the main screen; the source filter lives in the settings modal.</li>
+</ol>
+<h3>4.4 Asking an AI assistant (MCP)</h3>
+<p>The engine speaks MCP (Model Context Protocol) at <code>/mcp</code>, so Claude (or any MCP client) can search your files as a tool. Three tools exist:</p>
+<ul>
+<li><code>search_documents(query, top_k=5, source_ids)</code> — search,</li>
+<li><code>list_sources()</code> — what's indexed and when it last synced,</li>
+<li><code>reindex_source(source_id)</code> — trigger a re-sync.</li>
+</ul>
+<p>Point a local client at <code>http://127.0.0.1:8420/mcp</code> (loopback hosts are always allowed); a tailnet client uses the ts.net hostname — it's pre-approved via <code>SEEKER_MCP_ALLOWED_HOSTS</code>. The same bearer token is required on every MCP call.</p>
+<h3>4.5 Raw API (curl)</h3>
+<pre><button class="cp">Copy</button><code># from the host — token into a variable once, never echoed
+TK=$(grep '^SEEKER_API_TOKEN=' /home/recoding/seeker/.env | cut -d= -f2-)
+
+curl -s http://127.0.0.1:8420/v1/health                        # {"status":"ok"} — no token needed
+curl -s -H "Authorization: Bearer $TK" http://127.0.0.1:8420/v1/status
+curl -s -H "Authorization: Bearer $TK" http://127.0.0.1:8420/v1/sources
+curl -s -H "Authorization: Bearer $TK" -H 'Content-Type: application/json' \
+     -d '{"query":"how does sync work","top_k":5}' \
+     http://127.0.0.1:8420/v1/search
+# restrict to one source:
+curl -s -H "Authorization: Bearer $TK" -H 'Content-Type: application/json' \
+     -d '{"query":"config","top_k":5,"filters":{"source_id":["gsmhub"]}}' \
+     http://127.0.0.1:8420/v1/search</code></pre>
+<p>Every response carries an <code>X-Request-Id</code> header (echoed if you sent one) — quote it when reporting a problem; it's in the engine log too.</p>
+</section>
+<section id="s5"><h2><span class="no">5</span>Making your files searchable (sources &amp; indexing)</h2>
+<h3>What's indexed today</h3>
+<p>Four sources, all on this machine:</p>
+<div class="tbl"><table>
+<thead><tr><th>Source</th><th>Folder (host)</th><th>Mounted at (container)</th></tr></thead>
+<tbody>
+<tr><td><code>gsmhub</code></td><td><code>/home/recoding/gsmhub</code></td><td><code>/sources/home</code></td></tr>
+<tr><td><code>cee-tailor</code></td><td><code>/home/recoding/cee-tailor</code></td><td><code>/sources/cee-tailor</code></td></tr>
+<tr><td><code>ai-router-setup</code></td><td><code>/home/recoding/ai-router-setup</code></td><td><code>/sources/ai-router-setup</code></td></tr>
+<tr><td><code>ant2oia</code></td><td><code>/home/recoding/ant2oia</code></td><td><code>/sources/ant2oia</code></td></tr>
+</tbody></table></div>
+<p>448 documents / 820 chunks as of 2026-11-17 — <strong>463 / 910 as of 2026-11-23</strong> (the daily timer keeps it growing). Deliberately <strong>not</strong> indexed: <code>$HOME</code> itself (it contains loose secret files — wallet/2FA/key notes), <code>Downloads</code>, media folders. Never point a source at the whole home directory.</p>
+<h3>What gets indexed — and what doesn't</h3>
+<div class="tbl"><table>
+<thead><tr><th>Content</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Text files (<code>.md</code>, <code>.txt</code>, code — <code>.ts</code>/<code>.tsx</code>/<code>.jsx</code> specially handled)</td><td>Indexed as text</td></tr>
+<tr><td>PDFs <strong>with a text layer</strong></td><td>Indexed, page numbers kept</td></tr>
+<tr><td>Scanned/image-only PDFs</td><td>Indexed to nothing (OCR is a later phase)</td></tr>
+<tr><td><code>.docx</code>/<code>.xlsx</code>/<code>.pptx</code> office files</td><td><strong>Skipped</strong> (unsupported)</td></tr>
+<tr><td>Images, video, binaries, zip archives</td><td>Skipped</td></tr>
+<tr><td>Hidden files/dirs (dot-prefixed)</td><td>Skipped</td></tr>
+<tr><td>Symlinks</td><td>Never followed, never indexed</td></tr>
+<tr><td>Dirs named in <code>SEEKER_EXCLUDE_DIRS</code></td><td>Pruned at any depth (currently <code>node_modules,dist,playwright-report,test-results</code>)</td></tr>
+</tbody></table></div>
+<p>Chunking splits at paragraph/section boundaries (~300–500 words, ~50-word overlap), so results point at meaningful passages, not arbitrary mid-sentence cuts.</p>
+<h3>The one structural constraint: the mount</h3>
+<p>The engine runs in a container and can only see folders <strong>explicitly mounted into it</strong>. Each mount is one line in the <code>engine:</code> service of <code>/home/recoding/seeker/docker-compose.yml</code> (read-only); the source's <code>root_path</code> is the container-side path:</p>
+<pre><button class="cp">Copy</button><code>.env:                 SEEKER_SOURCES=/home/recoding/gsmhub
+docker-compose.yml:   ${SEEKER_SOURCES}:/sources/home:ro                  → source "gsmhub"
+                      /home/recoding/cee-tailor:/sources/cee-tailor:ro    → source "cee-tailor"
+                      /home/recoding/ai-router-setup:/sources/ai-router-setup:ro
+                      /home/recoding/ant2oia:/sources/ant2oia:ro</code></pre>
+<p>To make a new folder searchable (say <code>/home/recoding/Documents</code>):</p>
+<ol>
+<li><strong>Edit <code>/home/recoding/seeker/docker-compose.yml</code></strong> — in the <code>engine:</code> service, add a volume line:
+<pre><button class="cp">Copy</button><code>    volumes:
+      - ./data:/data
+      - ${SEEKER_SOURCES:?set SEEKER_SOURCES in .env}:/sources/home:ro
+      - /home/recoding/Documents:/sources/documents:ro   # ← new line</code></pre>
+(Prefer per-folder mounts over mounting all of <code>$HOME</code> — bigger mounts mean slower walks and more noise.)</li>
+<li><strong>Recreate the engine</strong> so the mount appears:
+<pre><button class="cp">Copy</button><code>cd /home/recoding/seeker &amp;&amp; docker compose up -d</code></pre></li>
+<li><strong>Register + sync the source:</strong>
+<pre><button class="cp">Copy</button><code>TK=$(grep '^SEEKER_API_TOKEN=' /home/recoding/seeker/.env | cut -d= -f2-)
+curl -s -H "Authorization: Bearer $TK" -H 'Content-Type: application/json' \
+     -d '{"source_id":"documents","root_path":"/sources/documents"}' \
+     http://127.0.0.1:8420/v1/sources
+curl -s -X POST -H "Authorization: Bearer $TK" \
+     http://127.0.0.1:8420/v1/sources/documents/sync</code></pre></li>
+<li><strong>Verify:</strong> <code>GET /v1/status</code> — the new source should appear with a fresh <code>last_synced_at</code>. The overlay's chips pick it up next time you open it.</li>
+</ol>
+<div class="callout"><div class="t">Remember</div>Registering a source does <strong>not</strong> index it — always follow with a sync call.</div>
+<h3>Keeping the index fresh</h3>
+<p>Syncs run <strong>automatically every day at 09:00</strong> — a systemd user timer (<code>seeker-sync.timer</code>) calls <code>/home/recoding/seeker/scripts/sync-all.sh</code>, which syncs every registered source (it reads the token fresh from <code>.env</code>, so rotation needs no change here). Check it with <code>systemctl --user list-timers seeker-sync.timer</code>. Manual re-syncs still work anytime (or via an MCP client's <code>reindex_source</code>):</p>
+<pre><button class="cp">Copy</button><code>curl -s -X POST -H "Authorization: Bearer $TK" http://127.0.0.1:8420/v1/sources/gsmhub/sync</code></pre>
+<p>A sync returns its tally:</p>
+<pre><button class="cp">Copy</button><code>{"indexed": 3, "skipped_unchanged": 205, "unsupported": 12, "pruned": 1, "failed": []}</code></pre>
+<ul>
+<li><code>indexed</code> — new/changed files added; <code>skipped_unchanged</code> — files whose content hash is unchanged (no re-embedding); <code>unsupported</code> — skipped types; <code>pruned</code> — deleted files removed from the index.</li>
+<li><code>failed</code> lists individual files with <code>path</code>, <code>error</code>, <code>reason</code>, and a <code>suggestion</code> (e.g. "PDF could not be parsed (corrupt or image-only)").</li>
+<li>A source's status row reads <code>idle</code> (healthy), <code>syncing</code>, or <code>error</code> — check with <code>GET /v1/sources</code>. A failed sync leaves <code>error</code> in place; fix the cause and sync again.</li>
+</ul>
+<h3>Removing a source</h3>
+<pre><button class="cp">Copy</button><code>curl -s -X DELETE -H "Authorization: Bearer $TK" http://127.0.0.1:8420/v1/sources/&lt;id&gt;</code></pre>
+<p>This removes the source <strong>and every document indexed from it</strong>. The folder on disk is untouched. (The mount line in docker-compose.yml, if you added one, is yours to remove too.)</p>
+</section>
+<section id="s6"><h2><span class="no">6</span>Managing the engine</h2>
+<p>All commands run from <code>/home/recoding/seeker</code> (the live deployment directory).</p>
+<pre><button class="cp">Copy</button><code>cd /home/recoding/seeker
+docker compose ps                 # what's running, healthy?
+docker compose up -d              # start / apply config changes (.env, compose edits)
+docker compose restart engine     # plain restart
+docker compose stop               # stop the stack
+docker logs seeker-engine-1 --tail 100      # engine logs
+docker logs seeker-backup-1 --tail 20       # backup logs
+systemctl --user list-timers seeker-sync.timer   # daily auto-sync (09:00)</code></pre>
+<p>Every search hits the engine log like this — useful as proof a client really connected:</p>
+<pre><button class="cp">Copy</button><code>INFO: 172.19.0.1:64280 - "POST /v1/search HTTP/1.1" 200 OK     ← host/Brave (docker gateway)
+INFO: 100.101.53.85:0 - "POST /v1/search HTTP/1.1" 200 OK      ← phone over the tailnet</code></pre>
+<p><strong>Liveness:</strong> <code>curl http://127.0.0.1:8420/v1/health</code> → <code>{"status":"ok"}</code>. If that fails, <code>docker compose up -d</code> and check <code>docker compose ps</code>.</p>
+<p><strong>Embedding backend (Ollama)</strong> runs natively, not in Docker:</p>
+<pre><button class="cp">Copy</button><code>systemctl --user status ollama     # unit "ollama.service", port 11434
+systemctl --user restart ollama    # if embeddings start failing</code></pre>
+<p>The engine needs Ollama for search (queries are embedded live). If Ollama is down, searches fail with a backend error while health still reports ok.</p>
+<div class="note"><strong>Reboot note:</strong> after a host reboot the compose stack auto-starts (<code>restart: unless-stopped</code>); there was once a boot race between the now-disabled native <code>seeker-engine.service</code> and the engine container for port 8420 (fixed 2026-11-04 by disabling the native unit). If search fails right after a reboot, check Ollama first, then the Waydroid Tailscale app if testing from the phone. <strong>First search after a fresh start is slow</strong> (the embedding model loads on first use — observed ~5.8 s from the phone; subsequent searches ran in ~0.6–0.8 s). <strong>After a code change</strong>: rebuild with <code>docker compose up -d --build engine</code>.</div>
+</section>
+<section id="s7"><h2><span class="no">7</span>Backups — working since 2026-11-17</h2>
+<p>The stack runs a restic backup container (<code>seeker-backup-1</code>) that snapshots the index (<code>./data</code>) daily, keeping 7 daily / 4 weekly / 6 monthly snapshots. Getting here took two non-obvious fixes — worth knowing if you ever move the destination:</p>
+<ol>
+<li><strong><code>RESTIC_REPOSITORY</code> must be a path mounted into the container.</strong> <code>.env</code> sets <code>RESTIC_REPOSITORY=/backups</code>; docker-compose.yml mounts <code>/home/recoding/seeker-backups:/backups</code>. Restic can't create a repo on an unmounted host path — the first <code>init</code> silently landed inside the container layer and vanished.</li>
+<li><strong>Restic cannot read the live sqlite files directly.</strong> While the engine holds the WAL mmap'd, restic's reads fail with kernel I/O errors (plain sequential reads work fine — this cost an afternoon to pin down). The script therefore stages a copy with <code>cp</code> and backs the copy up. A copy torn by a concurrent sync degrades to "slightly stale, still consistent" on restore: sqlite validates WAL frames by salt + checksum and ignores a mismatched one.</li>
+</ol>
+<p>On failure it retries every 15 minutes (<code>BACKUP_RETRY_SECONDS</code>), not 24 h.</p>
+<p>Verify:</p>
+<pre><button class="cp">Copy</button><code>docker logs seeker-backup-1 --tail 5         # should end with "[backup] … done"
+cd /home/recoding/seeker &amp;&amp; docker compose run --rm --entrypoint restic backup snapshots</code></pre>
+<p>What's protected: the whole index. What isn't: your source folders themselves (those live outside <code>./data</code> — protect them with your normal file backups). To move the destination (e.g. offsite to Backblaze B2): set <code>RESTIC_REPOSITORY=b2:&lt;bucket&gt;:&lt;prefix&gt;</code> plus <code>B2_ACCOUNT_ID</code> / <code>B2_ACCOUNT_KEY</code> in <code>.env</code>, run <code>docker compose run --rm --entrypoint restic backup init</code>, then <code>docker compose up -d --force-recreate backup</code>.</p>
+</section>
+<section id="s8"><h2><span class="no">8</span>Security &amp; privacy</h2>
+<h3>The token</h3>
+<p>Every client-engine call carries <code>Authorization: Bearer &lt;token&gt;</code>, checked in constant time. It lives in <code>/home/recoding/seeker/.env</code> (<code>SEEKER_API_TOKEN</code>) and was rotated off the development placeholder on 2026-11-17 (the old <code>dev-insecure-token</code> is dead — the engine returns 401 for it). Re-run the same procedure whenever you want a fresh secret:</p>
+<pre><button class="cp">Copy</button><code>NEW=$(openssl rand -hex 32)
+sed -i "s/^SEEKER_API_TOKEN=.*/SEEKER_API_TOKEN=$NEW/" /home/recoding/seeker/.env
+cd /home/recoding/seeker &amp;&amp; docker compose up -d      # recreates the engine with the new token
+# then re-paste the new token in: the extension options, the phone app settings,
+# and any MCP client config — the old token stops working the moment the engine restarts</code></pre>
+<p>Where each client keeps the token: extension → browser profile (<code>chrome.storage.local</code>), readable only by the extension's background worker; phone app → OS secure keychain (<code>expo-secure-store</code>); never in a web page, never logged.</p>
+<h3>The network boundary</h3>
+<p>The engine binds to host loopback only (<code>127.0.0.1:8420</code>) — nothing on the LAN can reach it. The tailnet path is the Tailscale sidecar serving HTTPS with a proper certificate. Tailscale itself is a private wire — the public internet sees only encrypted Tailscale traffic.</p>
+<h3>What leaves the machine: nothing</h3>
+<p>Embeddings come from local Ollama; queries stay on the tailnet; no cloud API is called. (The compose file has an LLM endpoint knob for future query rewriting — it points at local Ollama too and is currently inert.)</p>
+<div class="note"><strong>Known exposure trade-offs, on record:</strong> Ollama is bound to <code>0.0.0.0</code> (LAN devices can use it — deliberate, documented 2026-11-03); the token is shared across clients (rotate when a device is lost — rotated once 2026-11-17, see open decision 8).</div>
+</section>
+<section id="s9"><h2><span class="no">9</span>Troubleshooting</h2>
+<h3>Engine / general</h3>
+<div class="tbl"><table>
+<thead><tr><th>Symptom</th><th>Cause → fix</th></tr></thead>
+<tbody>
+<tr><td><code>curl /v1/health</code> fails</td><td>Engine down → <code>cd /home/recoding/seeker &amp;&amp; docker compose up -d</code>, then <code>docker compose ps</code></td></tr>
+<tr><td>Search returns backend/model errors</td><td>Ollama down → <code>systemctl --user restart ollama</code></td></tr>
+<tr><td>Everything worked, now nothing does (after reboot)</td><td>Check Ollama unit first, then <code>docker compose ps</code>; phone users: reconnect Tailscale in Waydroid</td></tr>
+<tr><td>Search slow the first time</td><td>Model cold start (~5–6 s once); subsequent searches &lt; 1 s</td></tr>
+<tr><td>Results seem stale</td><td>Index is only as fresh as the last sync (automatic daily at 09:00) → <code>POST /v1/sources/&lt;id&gt;/sync</code> to sync now</td></tr>
+<tr><td><code>UNAUTHORIZED</code></td><td>Wrong/rotated token in that client → re-paste from <code>.env</code> (<code>SEEKER_API_TOKEN</code>)</td></tr>
+<tr><td>Empty results for a query you know is there</td><td>File type unsupported (§5 table), file added after last sync, or excluded dir — check the sync stats</td></tr>
+</tbody></table></div>
+<h3>Browser overlay</h3>
+<div class="tbl"><table>
+<thead><tr><th>Symptom</th><th>Cause → fix</th></tr></thead>
+<tbody>
+<tr><td>Options <strong>Test</strong> → <code>NETWORK_ERROR</code> on the ts.net URL</td><td>You're on the host — it's not a tailnet node. Use <code>http://127.0.0.1:8420</code> (the ts.net URL is for the phone)</td></tr>
+<tr><td>Test → <code>NETWORK_ERROR</code> on <code>127.0.0.1:8420</code></td><td>Engine down → first table, row 1</td></tr>
+<tr><td><code>Alt+Shift+S</code> does nothing</td><td>Refresh the page (F5) — tabs opened before the extension loaded lack the content script; or check <code>brave://extensions/shortcuts</code>; or you're on a <code>brave://</code> page</td></tr>
+<tr><td>Brave refused to load the extension</td><td>Use the Chrome-family <code>manifest.json</code> (already default) — and the folder, not a single file</td></tr>
+<tr><td>Firefox loads but can't search</td><td>You loaded the Chrome manifest — pick <code>manifest-firefox.json</code> instead</td></tr>
+<tr><td>Overlay shows but no source chips</td><td>Sources fetch failed → run Test in options; chips fall back to "All"</td></tr>
+</tbody></table></div>
+<h3>Phone app</h3>
+<div class="tbl"><table>
+<thead><tr><th>Symptom</th><th>Cause → fix</th></tr></thead>
+<tbody>
+<tr><td><code>NETWORK_ERROR</code> banner</td><td>Tailscale app in Waydroid disconnected (common after host reboot) → reopen and connect; verify with a fresh search — engine log should show <code>100.101.53.85</code></td></tr>
+<tr><td>Search works but slow</td><td>First search after cold start (~6 s)</td></tr>
+<tr><td>Settings lost</td><td>They shouldn't be (keychain-backed) — re-enter URL <code>https://search-engine-2.taile24e8b.ts.net</code> + token</td></tr>
+</tbody></table></div>
+</section>
+<section id="s10"><h2><span class="no">10</span>API reference</h2>
+<p>Base URL (host): <code>http://127.0.0.1:8420</code> · (tailnet): <code>https://search-engine-2.taile24e8b.ts.net</code><br>Auth: <code>Authorization: Bearer &lt;token&gt;</code> on everything except <code>/v1/health</code>.<br>All errors: <code>{"detail": {"code": "...", "message": "..."}}</code> with an <code>X-Request-Id</code> response header.</p>
+<div class="tbl"><table>
+<thead><tr><th>Method &amp; path</th><th>Purpose</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><code>GET /v1/health</code></td><td>Liveness</td><td>Anonymous. <code>{"status":"ok"}</code></td></tr>
+<tr><td><code>GET /v1/status</code></td><td>Model, counts, sources</td><td><code>{status, embedding_model, dimensions, documents, chunks, sources:[…]}</code></td></tr>
+<tr><td><code>GET /v1/sources</code></td><td>List sources</td><td>Each: <code>{id, type, root_path, last_synced_at, status}</code></td></tr>
+<tr><td><code>POST /v1/sources</code></td><td>Register a source</td><td>Body <code>{"source_id", "root_path"}</code> → 201. <code>root_path</code> must be a mounted dir (422 <code>VALIDATION_ERROR</code> otherwise). <strong>Does not sync</strong> — follow with the call below</td></tr>
+<tr><td><code>POST /v1/sources/{id}/sync</code></td><td>Index a source</td><td>Returns <code>{indexed, skipped_unchanged, unsupported, pruned, failed:[…]}</code>; 404 <code>SOURCE_NOT_FOUND</code> for unknown ids</td></tr>
+<tr><td><code>DELETE /v1/sources/{id}</code></td><td>Remove a source</td><td>204; cascades its documents</td></tr>
+<tr><td><code>POST /v1/search</code></td><td>Semantic search</td><td>Body <code>{"query": str (≥1 char), "top_k": 1–100 (default 5), "filters": {"source_id": ["id", …]}}</code> (optional). Response <code>{"results": [row, …]}</code></td></tr>
+<tr><td><code>POST /mcp</code></td><td>MCP transport</td><td>Bearer-gated like REST; tools <code>search_documents</code>, <code>list_sources</code>, <code>reindex_source</code></td></tr>
+</tbody></table></div>
+<h3>Search result row</h3>
+<pre><button class="cp">Copy</button><code>{
+  "chunk_id": "…", "document_id": "…", "title": "file name",
+  "path": "path inside the source", "snippet": "first ~240 chars",
+  "score": 0.62, "source_id": "gsmhub", "page": 3, "position": 12
+}</code></pre>
+<p><code>score</code> is cosine similarity (higher = closer in meaning). <code>page</code> is the PDF page (<code>null</code> for plain text). <code>position</code> is the chunk's index within its document.</p>
+<p>Error codes: <code>UNAUTHORIZED</code> (401) · <code>VALIDATION_ERROR</code> (422 — bad body, empty query, non-directory root_path) · <code>SOURCE_NOT_FOUND</code> (404) · anything else → 500.</p>
+</section>
+<section id="s11"><h2><span class="no">11</span>Current state &amp; limits <span style="font:500 13px Inter;color:var(--faint)">(2026-11-23)</span></h2>
+<ul>
+<li><strong>Indexed:</strong> 4 sources (<code>gsmhub</code>, <code>cee-tailor</code>, <code>ai-router-setup</code>, <code>ant2oia</code>), 463 documents, 910 chunks (2026-11-23).</li>
+<li><strong>Retrieval quality:</strong> baseline recall@5 = <strong>0.50</strong> over a 20-query eval set (measured on the gsmhub-only corpus, 2026-10-30; re-confirmed 2026-11-04) — about half of known-relevant files appear in the top 5. Sprawling catch-all files crowd out precise ones. Planned (not built): query rewriting, a reranker pass — and a re-baseline now that the corpus has tripled.</li>
+<li><strong>Syncs:</strong> automatic daily at 09:00 (systemd <code>seeker-sync.timer</code>); manual anytime.</li>
+<li><strong>Backups:</strong> working since 2026-11-17 (staged-copy design — §7); snapshots verified.</li>
+<li><strong>Token:</strong> rotated 2026-11-17; live value in <code>.env</code> (<code>SEEKER_API_TOKEN</code>).</li>
+<li><strong>Tailnet housekeeping:</strong> two dead nodes (<code>search-engine</code>, <code>search-engine-1</code>) remain in the Tailscale admin console to delete manually.</li>
+<li><strong>Not built yet:</strong> Office add-in (Phase 5), OS-native search hooks (Phase 6), OCR, office-document extraction, per-source exclude rules.</li>
+</ul>
+</section>
+<section id="s12"><h2><span class="no">12</span>FAQ</h2>
+<p><strong>Why do I get gsmhub results when I search from Google Docs?</strong><br>Because gsmhub was the only source then — four are indexed now, and results come from all of them (click a chip to filter by source, or add more folders per §5). The overlay never looks at the page you're on — it searches your index from wherever you are.</p>
+<p><strong>Is my data sent anywhere?</strong><br>No. See §8.</p>
+<p><strong>Why not Ctrl+Alt+S for the overlay?</strong><br>Chromium rejects Ctrl+Alt shortcuts at load time (they collide with AltGr character input). <code>Alt+Shift+S</code> is the chosen binding; rebind freely.</p>
+<p><strong>Can I index the same folder from two sources?</strong><br>Technically yes, but you'd get duplicate results. One source per folder.</p>
+<p><strong>What happens if I delete a file?</strong><br>It stays in the index until the next sync of its source, which prunes it (<code>"pruned"</code> in the sync stats).</p>
+<p><strong>How do I search from another machine?</strong><br>Install the extension there (§4.2), put that machine on your tailnet, and set the engine URL to <code>https://search-engine-2.taile24e8b.ts.net</code>. The token is the same.</p>
+<p><strong>The engine URL field — which one do I use where?</strong><br>Host apps and browsers: <code>http://127.0.0.1:8420</code>. Anything on the tailnet (phone): <code>https://search-engine-2.taile24e8b.ts.net</code>.</p>
+</section>
+<footer>Seeker · owner-operator manual · generated 2026-11-23 from the live deployment · file locations: live deployment + compose + .env → <code>/home/recoding/seeker</code> · index data → <code>/home/recoding/seeker/data/seeker.db</code> · engine source → <code>/home/recoding/seeker/engine</code> · extension → <code>extension/</code> · mobile app → <code>mobile/</code> · project docs → <code>docs/</code></footer>
+<script>
+document.querySelectorAll('pre').forEach(function(pre){
+  var b=pre.querySelector('.cp'); if(!b) return;
+  b.addEventListener('click',function(){
+    var t=pre.querySelector('code'); var s=t?t.textContent:'';
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(s).then(function(){b.textContent='Copied';setTimeout(function(){b.textContent='Copy';},1200);},function(){b.textContent='Select & copy manually';});}
+    else{b.textContent='Select & copy manually';}
+  });
+});
+</script>
+</main>
+</div>

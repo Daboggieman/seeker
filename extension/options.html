@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Seeker settings</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; background: #161a22; color: #e8eaf0; margin: 0; padding: 16px; width: 340px; }
+    h1 { font-size: 15px; margin: 0 0 14px; }
+    label { display: block; font-size: 11px; letter-spacing: .08em; color: #8b93a7; margin: 12px 0 4px; }
+    input { box-sizing: border-box; width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid #2a3140; background: #10141c; color: #e8eaf0; font-size: 13px; }
+    .row { display: flex; gap: 8px; margin-top: 16px; }
+    button { flex: 1; padding: 9px 0; border-radius: 8px; border: 1px solid #2a3140; background: #1a2029; color: #e8eaf0; cursor: pointer; font-size: 13px; }
+    button.primary { background: #2b3a55; border-color: #3d5a8a; }
+    #msg { margin-top: 12px; font-size: 12px; color: #8b93a7; min-height: 18px; }
+    #msg.err { color: #e08b8b; }
+    #msg.ok { color: #8fd6a0; }
+    .note { margin-top: 14px; font-size: 11px; color: #5f6b85; }
+  </style>
+</head>
+<body>
+  <h1>Engine connection</h1>
+  <label>ENGINE URL (TAILNET)</label>
+  <input id="baseUrl" type="text" spellcheck="false">
+  <label>BEARER TOKEN</label>
+  <input id="token" type="password" spellcheck="false" autocomplete="off">
+  <div class="row">
+    <button id="test">Test</button>
+    <button id="save" class="primary">Save</button>
+  </div>
+  <div id="msg"></div>
+  <div class="note">The token is stored in this browser profile (chrome.storage.local) —
+  rotate it from the engine's .env if the profile is ever compromised. The token is never
+  sent anywhere except the engine URL above.</div>
+  <script src="options.js"></script>
+</body>
+</html>
